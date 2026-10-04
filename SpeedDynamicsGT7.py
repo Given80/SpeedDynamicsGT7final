@@ -109,23 +109,26 @@ def start_web():
     ThreadingHTTPServer(("0.0.0.0", WEB_PORT), Handler).serve_forever()
 
 class Bridge:
+    """GT7 UDP bridge with a real live delta reference trajectory.
+
+    The reference lap is recorded sample-by-sample using integrated speed
+    (distance). During the next laps the current elapsed time is compared at
+    the same travelled distance, so the delta changes continuously through
+    corners instead of comparing the whole lap time against a fixed number.
+    """
     def __init__(self, ip, status):
         self.ip = ip
         self.status = status
         self.running = False
         self.mode = "C"
-        # Live delta reference: a complete lap is stored as elapsed-time
-        # samples against accumulated distance.  This allows a delta at the
-        # current corner/track position instead of comparing the whole lap
-        # time with the current elapsed time.
+        self.reference = None
         self.reference_samples = []
-        self.current_samples = []
-        self.current_lap_no = None
-        self.current_distance = 0.0
+        self.reference_distance = 0.0
+        self.lap_start = None
+        self.last_lap = None
         self.last_sample_time = None
-        self.last_current_lap_ms = -1
-        self.reference_lap_ms = None
-        self.reference_ready = False
+        self.lap_distance = 0.0
+        self.lap_samples = []
 
     def start(self):
         self.running = True
@@ -135,7 +138,7 @@ class Bridge:
         self.running = False
 
     @staticmethod
-    def _interp(samples, distance):
+    def interpolate_reference(samples, distance):
         if not samples:
             return None
         if distance <= samples[0][0]:
@@ -143,7 +146,7 @@ class Bridge:
         if distance >= samples[-1][0]:
             return samples[-1][1]
         lo, hi = 0, len(samples) - 1
-        while hi - lo > 1:
+        while lo + 1 < hi:
             mid = (lo + hi) // 2
             if samples[mid][0] <= distance:
                 lo = mid
@@ -156,65 +159,19 @@ class Bridge:
         f = (distance - d0) / (d1 - d0)
         return t0 + (t1 - t0) * f
 
-    def _finish_lap(self, lap_time_ms):
-        if not self.current_samples or lap_time_ms <= 0:
-            self.current_samples = []
+    def finish_lap(self, lap_time_ms):
+        if lap_time_ms <= 0 or not self.lap_samples:
             return
-
-        # Only accept a complete lap with sensible duration and distance.
-        # Keep the fastest captured lap as the live reference.
-        if len(self.current_samples) >= 20:
-            if self.reference_lap_ms is None or lap_time_ms < self.reference_lap_ms:
-                self.reference_lap_ms = lap_time_ms
-                self.reference_samples = list(self.current_samples)
-                self.reference_ready = True
-        self.current_samples = []
-
-    def _update_lap_tracking(self, p, now):
-        lap_no = p.get("lap", 0)
-        current_ms = p.get("current_lap_ms", -1)
-
-        if self.last_sample_time is None:
-            self.last_sample_time = now
-
-        dt = max(0.0, min(0.25, now - self.last_sample_time))
-        self.last_sample_time = now
-
-        # Packet C gives the actual live lap timer.  Packet A gets a local
-        # elapsed timer below, so both modes feed the same delta engine.
-        if self.current_lap_no is None:
-            self.current_lap_no = lap_no
-            self.current_distance = 0.0
-            self.current_samples = []
-
-        if lap_no != self.current_lap_no:
-            completed_ms = self.last_current_lap_ms
-            if completed_ms > 0:
-                self._finish_lap(completed_ms)
-            self.current_lap_no = lap_no
-            self.current_distance = 0.0
-            self.current_samples = []
-
-        speed_mps = max(0.0, float(p.get("speed", 0.0)) / 3.6)
-        self.current_distance += speed_mps * dt
-
-        if current_ms >= 0:
-            elapsed_ms = current_ms
-        else:
-            elapsed_ms = int((now - getattr(self, "lap_start", now)) * 1000)
-            p["current_lap_ms"] = elapsed_ms
-
-        # Store a sample roughly every telemetry packet.  Repeated distances
-        # are ignored while stationary to keep interpolation stable.
-        if not self.current_samples or self.current_distance > self.current_samples[-1][0] + 0.02:
-            self.current_samples.append((self.current_distance, elapsed_ms))
-
-        self.last_current_lap_ms = elapsed_ms
-
-        ref_time = self._interp(self.reference_samples, self.current_distance)
-        if ref_time is None:
-            return None
-        return elapsed_ms - ref_time
+        # Add a final point at the measured lap time.
+        samples = list(self.lap_samples)
+        if samples[-1][1] < lap_time_ms:
+            samples.append((self.lap_distance, float(lap_time_ms)))
+        # First completed lap becomes the reference. Afterwards only a
+        # genuinely faster completed lap replaces it.
+        if self.reference is None or lap_time_ms < self.reference:
+            self.reference = int(lap_time_ms)
+            self.reference_samples = samples
+            self.reference_distance = samples[-1][0] if samples else 0.0
 
     def run(self):
         try:
@@ -229,8 +186,6 @@ class Bridge:
         self.status("UDP 33740 bereit · Packet C wird angefordert")
         started = time.monotonic()
         last_request = 0
-        self.lap_start = None
-        self.last_lap = None
 
         while self.running:
             now = time.monotonic()
@@ -258,29 +213,63 @@ class Bridge:
                     continue
 
                 p = parse_packet(plain)
+                packet_time = now
 
-                # Packet A has no live lap timer.  Build one from the local
-                # lap boundary clock, but use the exact Packet C timer when
-                # available.
+                # Packet A has no live lap timer. Build it locally from the
+                # packet cadence; Packet C supplies the exact GT7 timer.
                 if p["packet"] == "A":
                     self.mode = "A"
                     if self.last_lap is None:
-                        self.lap_start = now
                         self.last_lap = p["lap"]
+                        self.lap_start = now
+                        self.last_sample_time = now
+                        self.lap_distance = 0.0
+                        self.lap_samples = []
                     elif p["lap"] != self.last_lap:
-                        completed = int((now - self.lap_start) * 1000) if self.lap_start is not None else 0
-                        if completed > 0:
-                            self.last_current_lap_ms = completed
-                            self._finish_lap(completed)
-                        self.lap_start = now
+                        completed = int((now - self.lap_start) * 1000) if self.lap_start else 0
+                        self.finish_lap(completed)
                         self.last_lap = p["lap"]
-                    p["current_lap_ms"] = int((now - self.lap_start) * 1000) if self.lap_start is not None else 0
+                        self.lap_start = now
+                        self.lap_distance = 0.0
+                        self.lap_samples = []
+                        self.last_sample_time = now
+                    p["current_lap_ms"] = int((now - self.lap_start) * 1000) if self.lap_start else 0
                 else:
                     if self.last_lap is None:
                         self.last_lap = p["lap"]
                         self.lap_start = now
+                        self.last_sample_time = now
+                        self.lap_distance = 0.0
+                        self.lap_samples = []
+                    elif p["lap"] != self.last_lap:
+                        # Packet C gives the completed lap time in last_lap_ms.
+                        completed = p.get("last_lap_ms", -1)
+                        if completed is None or completed < 0:
+                            completed = int((now - self.lap_start) * 1000) if self.lap_start else 0
+                        self.finish_lap(int(completed))
+                        self.last_lap = p["lap"]
+                        self.lap_start = now
+                        self.lap_distance = 0.0
+                        self.lap_samples = []
+                        self.last_sample_time = now
 
-                delta = self._update_lap_tracking(p, now)
+                # Integrate distance from speed. Clamp dt to protect against
+                # browser/OS pauses from creating a giant distance jump.
+                if self.last_sample_time is None:
+                    dt = 0.0
+                else:
+                    dt = max(0.0, min(0.20, packet_time - self.last_sample_time))
+                self.last_sample_time = packet_time
+                speed_mps = max(0.0, float(p.get("speed", 0.0)) / 3.6)
+                self.lap_distance += speed_mps * dt
+                current_ms = max(0, int(p.get("current_lap_ms", -1)))
+                self.lap_samples.append((self.lap_distance, float(current_ms)))
+
+                delta = None
+                if self.reference_samples:
+                    ref_ms = self.interpolate_reference(self.reference_samples, self.lap_distance)
+                    if ref_ms is not None:
+                        delta = current_ms - ref_ms
 
                 with lock:
                     state.update(p)
@@ -288,14 +277,13 @@ class Bridge:
                     state["mode"] = p["packet"]
                     state["valid"] += 1
                     state["delta_ms"] = delta
-                    state["reference_ms"] = self.reference_lap_ms
-                    state["reference_ready"] = self.reference_ready
+                    state["reference_ms"] = self.reference
+                    state["reference_ready"] = self.reference is not None
                     valid = state["valid"]
 
-                ref_txt = "bereit" if self.reference_ready else "warte auf Referenzrunde"
                 self.status(
                     f"GT7 LIVE VERBUNDEN · Packet {p['packet']} · "
-                    f"{len(raw)} Bytes · gültige Pakete: {valid} · Delta-Referenz: {ref_txt}"
+                    f"{len(raw)} Bytes · gültige Pakete: {valid}"
                 )
             except socket.timeout:
                 pass
