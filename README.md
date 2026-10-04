@@ -1,4 +1,4 @@
-[README.txt](https://github.com/user-attachments/files/33026936/README.txt)
+[README.txt](https://github.com/user-attachments/files/33027258/README.txt)
 SPEED DYNAMICS GT7 – FINAL DESIGN UPDATE
 
 - Kopfzeile fest: Speed-Dynamics-Logo, goldene Fahrzeug-Silhouette, LIVE, GT7 und kleines Zahnrad.
