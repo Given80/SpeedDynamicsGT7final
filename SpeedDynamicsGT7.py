@@ -82,11 +82,13 @@ def parse_common(d):
 def parse_packet(plain):
     p = parse_common(plain[:296])
     if len(plain) >= 368:
-        # Packet C appends to the 296-byte base packet: 4 bytes surface +
-        # 4 bytes current-lap timer. Therefore currentLap starts at 0x12C.
-        # 0x140 is 20 bytes too late and was the reason the dashboard showed
-        # 0:00.000 even though GT7 was already several seconds into the lap.
-        p["current_lap_ms"] = i32(plain, 0x12C)
+        # Packet C is appended after the full 316-byte Packet-B payload.
+        # Packet C fields therefore start at 0x13C:
+        #   0x13C..0x13F = surfaceType[4]
+        #   0x140..0x143 = currentLap (milliseconds)
+        # Reading 0x12C reads bytes from the padding/extended area instead
+        # and produces the huge bogus lap times seen on the dashboard.
+        p["current_lap_ms"] = i32(plain, 0x140)
         p["packet"] = "C"
     else:
         p["current_lap_ms"] = -1
