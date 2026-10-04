@@ -2,101 +2,216 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050608">
 <title>Speed Dynamics GT7</title>
 <style>
-:root{--bg:#050608;--panel:#0b0f14;--panel2:#11161d;--line:#3a4149;--gold:#f2b900;--gold2:#ffd84d;--text:#f4f5f6;--muted:#8e969f;--green:#00e676;--red:#ff3b3b;--blue:#2ea8ff;--purple:#a47cff;--gap:10px;--radius:16px;--rpm1:#20e040;--rpm2:#ffd400;--rpm3:#ff8f00;--rpm4:#ff2f2f}
-*{box-sizing:border-box}html,body{margin:0;background:radial-gradient(circle at 15% 0%,rgba(242,185,0,.08),transparent 30%),linear-gradient(145deg,#020304,#0a0d11 55%,#040506);color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;min-height:100%}body{padding:clamp(7px,1.2vw,18px)}button,input{font:inherit}.app{max-width:1600px;margin:auto}
-.header{height:clamp(76px,8.6vw,118px);display:grid;grid-template-columns:5fr 3fr 2fr;gap:clamp(4px,0.6vw,9px);align-items:center;margin-bottom:clamp(8px,1vw,14px);position:relative}
-.headerBlock{border:0;border-radius:0;background:transparent;overflow:hidden;position:relative}.brandBlock{display:flex;align-items:center;padding:0 4px}.brandLogo{width:100%;height:100%;object-fit:contain;object-position:left center}.carBlock{display:flex;align-items:center;justify-content:center}.carImg{width:100%;height:100%;object-fit:contain;object-position:center}.liveBlock{display:flex;align-items:center;justify-content:flex-end;gap:clamp(5px,.7vw,10px);padding-right:34px}.liveDot{width:clamp(9px,1vw,14px);height:clamp(9px,1vw,14px);border-radius:50%;background:#666}.liveBlock.on .liveDot{background:var(--green);box-shadow:0 0 16px rgba(0,230,118,.8)}.liveBlock.off .liveDot{background:var(--red);box-shadow:0 0 12px rgba(255,59,59,.45)}.liveText{font-size:clamp(13px,1.7vw,24px);font-weight:900}.gtMarkImg{width:clamp(42px,4.8vw,72px);height:auto;object-fit:contain}.headerGear{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:clamp(24px,2.6vw,38px);height:clamp(24px,2.6vw,38px);border:0;background:transparent;color:#fff;font-size:clamp(17px,2vw,27px);cursor:pointer;padding:0;opacity:.9}.headerGear:hover{opacity:1;transform:translateY(-50%) rotate(18deg)}
-.dashboard{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:minmax(78px,auto);gap:var(--gap);position:relative}.card{min-width:0;background:linear-gradient(145deg,rgba(255,255,255,.04),transparent 40%),linear-gradient(135deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);padding:clamp(10px,1.2vw,17px);box-shadow:0 8px 26px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.025);overflow:hidden}.label{font-size:clamp(10px,1.05vw,15px);font-weight:900;color:#b8bec5;letter-spacing:.05em}.value{font-size:clamp(31px,3.7vw,62px);line-height:1;font-weight:900;margin-top:7px;white-space:nowrap}.unit{font-size:clamp(9px,1vw,14px);font-weight:700;color:#9ca4ad;margin-top:5px}.speed{grid-column:span 4}.gear{grid-column:span 3}.rpm{grid-column:span 5}.throttle,.brake,.fuel{grid-column:span 4}.position{grid-column:span 3}.delta{grid-column:span 6;grid-row:span 2;min-height:180px}.current{grid-column:span 3}.lap,.best,.last{grid-column:span 3}.bar{height:11px;background:#171c22;border:1px solid #343b43;border-radius:99px;overflow:hidden;margin-top:11px}.fill{height:100%;width:0%;transition:width .12s linear}.throttle .fill{background:linear-gradient(90deg,#00c853,#69f0ae)}.brake .fill{background:linear-gradient(90deg,#d50000,#ff5252)}.rpmbar{background:#12161b}.rpmbar .fill{background:var(--rpmColor,#20e040);transition:width .12s linear,background .12s linear}.rpmline{display:flex;justify-content:space-between;align-items:end}.rpmnum{font-size:clamp(28px,3.2vw,52px);font-weight:900}.delta{transition:.18s}.delta .value{font-size:clamp(50px,6.5vw,100px);letter-spacing:-.035em}.delta .state{font-size:clamp(12px,1.3vw,19px);font-weight:900;letter-spacing:.12em;margin-top:8px}.delta .ref{font-size:clamp(10px,1vw,14px);color:#aeb4ba;margin-top:9px}.delta.faster{border-color:rgba(0,230,118,.9);box-shadow:0 0 30px rgba(0,230,118,.12),inset 0 0 35px rgba(0,230,118,.05)}.delta.faster .value,.delta.faster .state{color:var(--green)}.delta.slower{border-color:rgba(255,59,59,.95);box-shadow:0 0 30px rgba(255,59,59,.14),inset 0 0 35px rgba(255,59,59,.05)}.delta.slower .value,.delta.slower .state{color:var(--red)}.delta.equal{border-color:#8f969d}.delta.equal .value,.delta.equal .state{color:#f0f2f4}
-.controls{display:flex;justify-content:flex-end;gap:8px;margin:8px 0}.settingsBtn,.saveBtn,.resetBtn{border:1px solid #555d66;border-radius:10px;background:#11161c;color:#fff;padding:9px 13px;font-weight:800;cursor:pointer}.settingsBtn{border-color:#a47c00}.saveBtn{background:#b78600;color:#080a0d;border-color:#ffd84d}.resetBtn{background:#242a30}.hidden{display:none!important}
-.editor .dashboard{outline:1px dashed rgba(242,185,0,.35);padding:6px}.editor .widget{position:relative;cursor:grab;outline:1px dashed rgba(255,255,255,.65);touch-action:none}.editor .widget:active{cursor:grabbing}.editor .widget::after{content:'↕↔';position:absolute;right:7px;top:6px;font-size:12px;color:#fff;background:rgba(0,0,0,.55);border-radius:5px;padding:2px 4px}.editor .resize{position:absolute;right:3px;bottom:3px;width:17px;height:17px;border-right:3px solid var(--gold);border-bottom:3px solid var(--gold);cursor:nwse-resize;z-index:5}.editor .widget.selected{outline:2px solid var(--gold);box-shadow:0 0 0 3px rgba(242,185,0,.13)}
-.editorPanel{position:fixed;z-index:20;right:14px;top:14px;width:min(390px,calc(100vw - 28px));max-height:calc(100vh - 28px);overflow:auto;background:#0b0e12;border:1px solid #59616a;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:15px}.editorPanel h2{font-size:18px;margin:0 0 10px}.row{display:flex;gap:8px;align-items:center;margin:8px 0}.row label{font-size:12px;color:#b8bec5;flex:1}.row input[type=number]{width:85px;background:#161b21;color:#fff;border:1px solid #3e454d;border-radius:7px;padding:7px}.row input[type=color]{width:45px;height:34px;border:0;background:transparent}.panelTitle{font-size:11px;font-weight:900;color:#d7b45a;letter-spacing:.12em;margin-top:14px}.closeBtn{float:right}.layoutHint{font-size:11px;color:#8e969f;line-height:1.4}.selectWidget{width:100%;background:#151a20;color:#fff;border:1px solid #3e454d;border-radius:8px;padding:8px}.footer{text-align:center;color:#69717a;font-size:10px;padding:10px}
-@media(max-width:900px){.header{grid-template-columns:5fr 3fr 2fr}.value{font-size:clamp(28px,4.2vw,48px)}.delta .value{font-size:clamp(45px,6.5vw,76px)}}
-@media(max-width:600px){body{padding:6px}.header{height:62px;grid-template-columns:5fr 3fr 2fr}.brandBlock{padding:2px}.liveBlock{padding-right:24px;gap:4px}.liveText{font-size:11px}.liveDot{width:8px;height:8px}.gtMarkImg{width:34px}.headerGear{right:0;width:20px;height:20px;font-size:15px}.dashboard{gap:7px}.card{padding:9px;border-radius:11px}.value{font-size:clamp(24px,8vw,38px)}.delta{min-height:140px}.delta .value{font-size:clamp(38px,13vw,58px)}.label{font-size:9px}.unit{font-size:8px}.bar{height:8px;margin-top:7px}.controls{margin:5px 0}.settingsBtn{padding:7px 9px;font-size:11px}}
+:root{
+  --bg:#050608;--panel:#0d1014;--panel2:#11151a;--line:#3a4149;
+  --gold:#f2b900;--text:#f4f5f6;--muted:#8e969f;
+  --green:#00e676;--red:#ff4d4d;--gap:12px;--radius:18px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:linear-gradient(145deg,#030405,#0a0d11 55%,#050608);color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+body{padding:clamp(7px,1.2vw,18px)}
+.app{max-width:1500px;margin:auto}
+.top{
+  height:clamp(92px,11vw,155px);display:grid;
+  grid-template-columns:1.35fr 1fr .42fr;align-items:center;gap:12px;
+  padding:10px 18px;border:1px solid #2f353b;border-radius:18px;
+  background:linear-gradient(120deg,#030405,#0b0e12);
+  margin-bottom:var(--gap);overflow:hidden;
+}
+.logo{font-weight:950;font-style:italic;letter-spacing:-.055em;font-size:clamp(27px,4.4vw,66px);white-space:nowrap;
+  background:linear-gradient(105deg,#ffd84d 0%,#f2b900 25%,#fff 46%,#cfd3d7 57%,#f2b900 78%,#ffd84d);
+  -webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 18px rgba(242,185,0,.14)}
+.sub{font-size:clamp(8px,1vw,14px);font-weight:800;letter-spacing:.14em;color:#d8dadd;margin-top:2px}
+.car{height:100%;display:flex;align-items:center;justify-content:center}
+.car svg{width:100%;max-width:440px;height:auto}
+.status{height:100%;display:flex;align-items:center;justify-content:center;gap:9px;font-weight:900;font-size:clamp(14px,1.6vw,24px)}
+.dot{width:12px;height:12px;border-radius:50%;background:#ff3b30;box-shadow:0 0 12px rgba(255,59,48,.5)}
+.status.on .dot{background:#00e676;box-shadow:0 0 14px rgba(0,230,118,.8)}
+.status.off .dot{background:#ff3b30}
+.gt7{font-style:italic;font-size:clamp(20px,3vw,42px);font-weight:950;margin-left:6px}
+.gt7 b{color:#f2b900}.gt7 span{color:#f4f5f6}
+.settings{
+  position:absolute;right:10px;top:10px;width:38px;height:38px;border:1px solid #777;
+  border-radius:10px;background:#0b0d10;color:#fff;font-size:21px;cursor:pointer
+}
+.topwrap{position:relative}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--gap)}
+.card{
+  min-width:0;background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 38%),linear-gradient(135deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-radius:var(--radius);padding:clamp(11px,1.35vw,19px);
+  box-shadow:0 8px 28px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.025)
+}
+.label{font-size:clamp(10px,1.05vw,15px);font-weight:900;color:#c1c6cb;letter-spacing:.04em}
+.value{font-size:clamp(29px,4vw,62px);line-height:1;font-weight:950;margin-top:7px;white-space:nowrap}
+.unit{font-size:clamp(9px,1vw,14px);font-weight:700;color:#9ca4ad;margin-top:5px}
+.speed{grid-column:span 3}.gear{grid-column:span 2}.rpm{grid-column:span 7}
+.small{grid-column:span 4}.fuel{grid-column:span 4}
+.position{grid-column:span 3}.delta{grid-column:span 6;min-height:185px}
+.current{grid-column:span 3}.lap{grid-column:span 3}.best{grid-column:span 3}.last{grid-column:span 3}
+.bar{height:12px;background:#191e24;border:1px solid #424950;border-radius:99px;overflow:hidden;margin-top:12px}
+.fill{height:100%;width:0%;transition:width .12s linear}
+.throttle .fill{background:#00e676}.brake .fill{background:#ff3b30}
+.rpmbar .fill{background:#ffd400}
+.rpmline{display:flex;align-items:end;margin-top:7px}.rpmnum{font-size:clamp(28px,3.2vw,51px);font-weight:950}
+.delta{display:flex;flex-direction:column;justify-content:center;transition:.18s}
+.delta .value{font-size:clamp(45px,6vw,88px);letter-spacing:-.035em}
+.delta .state{font-size:clamp(12px,1.35vw,19px);font-weight:950;letter-spacing:.12em;margin-top:7px}
+.delta .ref{font-size:clamp(10px,1vw,14px);color:#aeb4ba;margin-top:9px}
+.delta.faster{border-color:#00e676;box-shadow:0 0 28px rgba(0,230,118,.12)}.delta.faster .value,.delta.faster .state{color:#00e676}
+.delta.slower{border-color:#ff4d4d;box-shadow:0 0 28px rgba(255,77,77,.12)}.delta.slower .value,.delta.slower .state{color:#ff4d4d}
+.delta.equal .value,.delta.equal .state{color:#f4f5f6}
+.panel{
+  display:none;position:fixed;z-index:50;right:14px;top:14px;width:min(390px,calc(100vw - 28px));
+  background:#0b0e12;border:1px solid #555d65;border-radius:16px;padding:18px;
+  box-shadow:0 18px 60px rgba(0,0,0,.65)
+}
+.panel.open{display:block}.panel h2{margin:0 0 14px;font-size:20px}.row{display:grid;grid-template-columns:1fr 100px;gap:10px;align-items:center;margin:10px 0}
+.row input[type=number]{width:100%;background:#161a1f;color:#fff;border:1px solid #48505a;border-radius:8px;padding:8px}
+.row input[type=color]{width:100%;height:38px;background:#111;border:1px solid #48505a;border-radius:8px}
+.panel button{border:0;border-radius:9px;padding:9px 12px;font-weight:800;cursor:pointer;background:#222a31;color:#fff}.panel .save{background:#f2b900;color:#111;margin-right:8px}
+.note{font-size:11px;color:#9ca4ad;line-height:1.4;margin-top:12px}
+@media(max-width:900px){
+ .top{grid-template-columns:1.3fr 1fr .55fr}.speed{grid-column:span 4}.gear{grid-column:span 2}.rpm{grid-column:span 6}
+ .small{grid-column:span 4}.fuel{grid-column:span 4}.position{grid-column:span 4}.delta{grid-column:span 8}.current{grid-column:span 4}
+ .lap,.best,.last{grid-column:span 4}
+}
+@media(max-width:600px){
+ body{padding:6px}:root{--gap:8px;--radius:13px}
+ .top{height:78px;padding:6px 10px;grid-template-columns:1.4fr 1fr .45fr;gap:5px;border-radius:12px}
+ .logo{font-size:21px}.sub{font-size:6px;letter-spacing:.08em}.gt7{font-size:17px}.status{font-size:10px;gap:4px}.dot{width:8px;height:8px}
+ .car svg{max-width:190px}.settings{width:30px;height:30px;font-size:16px;right:6px;top:6px}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .speed,.gear{grid-column:span 1}.rpm{grid-column:span 2}.small,.fuel,.position,.lap,.best,.last{grid-column:span 1}
+ .delta,.current{grid-column:span 2}.delta{min-height:145px}.value{font-size:clamp(27px,9vw,43px)}.delta .value{font-size:clamp(42px,13vw,64px)}
+ .bar{height:9px;margin-top:8px}.label{font-size:9px}.unit{font-size:8px}.card{padding:10px}
+}
 </style>
 </head>
 <body>
-<div class="app" id="app">
-  <header class="header" id="header">
-    <div class="headerBlock brandBlock" data-id="brand"><img class="brandLogo" src="speed_dynamics_logo.png" alt="Speed Dynamics"></div>
-    <div class="headerBlock carBlock" data-id="car"><img class="carImg" src="car_silhouette.png" alt="Fahrzeugsilhouette"></div>
-    <div class="headerBlock liveBlock off" data-id="live"><span class="liveDot"></span><span class="liveText" id="liveText">OFFLINE</span><img class="gtMarkImg" src="gt7_mark.png" alt="GT7"></div>
-    <button class="headerGear" id="editBtn" aria-label="Einstellungen">⚙</button>
-  </header>
-  <main class="dashboard" id="dashboard">
-    <section class="card widget speed" data-id="speed"><div class="label">SPEED</div><div id="speed" class="value">0.0</div><div class="unit">km/h</div></section>
-    <section class="card widget gear" data-id="gear"><div class="label">GEAR</div><div id="gear" class="value">N</div></section>
-    <section class="card widget rpm" data-id="rpm"><div class="label">RPM</div><div class="rpmline"><div id="rpm" class="rpmnum">0</div></div><div class="bar rpmbar"><div id="rpmFill" class="fill"></div></div></section>
-    <section class="card widget throttle" data-id="throttle"><div class="label">THROTTLE</div><div id="throttle" class="value">0%</div><div class="bar"><div id="throttleFill" class="fill"></div></div></section>
-    <section class="card widget brake" data-id="brake"><div class="label">BRAKE</div><div id="brake" class="value">0%</div><div class="bar"><div id="brakeFill" class="fill"></div></div></section>
-    <section class="card widget fuel" data-id="fuel"><div class="label">FUEL</div><div id="fuel" class="value">0.0</div><div class="unit">Liter</div></section>
-    <section class="card widget position" data-id="position"><div class="label">POSITION</div><div id="position" class="value">-/–</div></section>
-    <section class="card widget delta equal" data-id="delta"><div class="label">RUNDEN-DELTA</div><div id="delta" class="value">0.000 s</div><div id="deltaState" class="state">KEINE REFERENZ</div><div class="ref">Referenz: <span id="reference">--:--.---</span></div></section>
-    <section class="card widget current" data-id="current"><div class="label">AKTUELLE RUNDE</div><div id="currentLap" class="value">0:00.000</div></section>
-    <section class="card widget lap" data-id="lap"><div class="label">RUNDE</div><div id="lap" class="value">0/–</div></section>
-    <section class="card widget best" data-id="best"><div class="label">BEST LAP</div><div id="bestLap" class="value">--:--.---</div></section>
-    <section class="card widget last" data-id="last"><div class="label">LAST LAP</div><div id="lastLap" class="value">--:--.---</div></section>
+<div class="app">
+  <div class="topwrap">
+    <header class="top">
+      <div><div class="logo">SPEED DYNAMICS</div><div class="sub">GT7 RACE ENGINEER · LIVE TELEMETRY</div></div>
+      <div class="car" aria-label="Fahrzeug-Silhouette">
+        <svg viewBox="0 0 520 150" role="img">
+          <path d="M48 105 C72 94 91 88 121 83 L160 53 C184 34 217 28 269 29 L344 34 C374 37 397 48 420 65 L455 75 L475 101 L474 112 L447 112 C441 90 424 82 405 82 C383 82 367 94 363 112 L157 112 C153 92 137 82 116 82 C94 82 79 94 75 112 L48 112 Z" fill="none" stroke="#f2b900" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M169 52 L209 35 L267 35 L322 40 L358 57 L171 57 Z M110 83 L405 83" fill="none" stroke="#f2b900" stroke-width="3"/>
+          <circle cx="116" cy="112" r="23" fill="none" stroke="#f2b900" stroke-width="4"/><circle cx="405" cy="112" r="23" fill="none" stroke="#f2b900" stroke-width="4"/>
+          <path d="M420 65 L451 57 L484 64 L466 76" fill="none" stroke="#f2b900" stroke-width="4"/>
+        </svg>
+      </div>
+      <div class="status off" id="live"><span class="dot"></span><span id="liveText">OFFLINE</span><div class="gt7"><span>GT</span><b>7</b></div></div>
+    </header>
+    <button class="settings" id="settingsBtn" title="RPM-Einstellungen">⚙</button>
+  </div>
+
+  <main class="grid">
+    <section class="card speed"><div class="label">SPEED</div><div id="speed" class="value">0.0</div><div class="unit">km/h</div></section>
+    <section class="card gear"><div class="label">GEAR</div><div id="gear" class="value">N</div></section>
+    <section class="card rpm">
+      <div class="label">RPM</div><div class="rpmline"><div id="rpm" class="rpmnum">0</div></div>
+      <div class="bar rpmbar"><div id="rpmFill" class="fill"></div></div>
+    </section>
+
+    <section class="card small throttle"><div class="label">THROTTLE</div><div id="throttle" class="value">0%</div><div class="bar"><div id="throttleFill" class="fill"></div></div></section>
+    <section class="card small brake"><div class="label">BRAKE</div><div id="brake" class="value">0%</div><div class="bar"><div id="brakeFill" class="fill"></div></div></section>
+    <section class="card fuel"><div class="label">FUEL</div><div id="fuel" class="value">0.0</div><div class="unit">Liter</div></section>
+
+    <section class="card position"><div class="label">POSITION</div><div id="position" class="value">-/–</div></section>
+    <section id="deltaCard" class="card delta equal"><div class="label">RUNDEN-DELTA</div><div id="delta" class="value">0.000 s</div><div id="deltaState" class="state">KEINE REFERENZ</div><div class="ref">Referenz: <span id="reference">--:--.---</span></div></section>
+    <section class="card current"><div class="label">AKTUELLE RUNDE</div><div id="currentLap" class="value">0:00.000</div></section>
+
+    <section class="card lap"><div class="label">RUNDE</div><div id="lap" class="value">0/–</div></section>
+    <section class="card best"><div class="label">BEST LAP</div><div id="bestLap" class="value">--:--.---</div></section>
+    <section class="card last"><div class="label">LAST LAP</div><div id="lastLap" class="value">--:--.---</div></section>
   </main>
-  <div class="footer">Speed Dynamics GT7 · Layout wird auf diesem Gerät gespeichert</div>
 </div>
 
-<div class="editorPanel hidden" id="editorPanel">
-  <button class="settingsBtn closeBtn" id="closeEditor">✕</button>
-  <h2>Layout & RPM</h2>
-  <div class="layoutHint">Element auswählen und mit dem Finger/Maus verschieben. Mit der Ecke unten rechts kann die Größe geändert werden. Danach speichern.</div>
-  <div class="panelTitle">ELEMENT</div>
-  <select class="selectWidget" id="widgetSelect">
-    <option value="speed">Speed</option><option value="gear">Gang</option><option value="rpm">Drehzahl</option><option value="throttle">Throttle</option><option value="brake">Brake</option><option value="fuel">Fuel</option><option value="position">Position</option><option value="delta">Runden-Delta</option><option value="current">Aktuelle Runde</option><option value="lap">Runde</option><option value="best">Best Lap</option><option value="last">Last Lap</option>
-  </select>
-  <div class="panelTitle">RPM-FARBEN</div>
-  <div class="layoutHint">Der gefüllte Balken bleibt immer einfarbig. Die Farbe wechselt nach den frei gesetzten RPM-Grenzen.</div>
-  <div class="row"><label>RPM Maximum / Redline</label><input id="rpmMax" type="number" min="4000" max="15000" step="100"></div>
-  <div class="row"><label>Farbe 1 bis RPM</label><input id="rpmT1" type="number" min="0" max="15000" step="100"><input id="rpmC1" type="color"></div>
-  <div class="row"><label>Farbe 2 bis RPM</label><input id="rpmT2" type="number" min="0" max="15000" step="100"><input id="rpmC2" type="color"></div>
-  <div class="row"><label>Farbe 3 bis RPM</label><input id="rpmT3" type="number" min="0" max="15000" step="100"><input id="rpmC3" type="color"></div>
-  <div class="row"><label>Farbe 4 ab RPM 3</label><input id="rpmC4" type="color"></div>
-  <div class="row"><button class="saveBtn" id="saveBtn">💾 Layout speichern</button><button class="resetBtn" id="resetBtn">↺ Zurücksetzen</button></div>
+<div class="panel" id="panel">
+  <h2>RPM-Anzeige einstellen</h2>
+  <div class="row"><label>Bereich 1 bis</label><input id="r1" type="number" min="1" value="5000"></div>
+  <div class="row"><label>Farbe Bereich 1</label><input id="c1" type="color" value="#00e676"></div>
+  <div class="row"><label>Bereich 2 bis</label><input id="r2" type="number" min="2" value="6500"></div>
+  <div class="row"><label>Farbe Bereich 2</label><input id="c2" type="color" value="#ffd400"></div>
+  <div class="row"><label>Bereich 3 bis</label><input id="r3" type="number" min="3" value="7200"></div>
+  <div class="row"><label>Farbe Bereich 3</label><input id="c3" type="color" value="#ff8f00"></div>
+  <div class="row"><label>Bereich 4 bis</label><input id="r4" type="number" min="4" value="9000"></div>
+  <div class="row"><label>Farbe Bereich 4</label><input id="c4" type="color" value="#ff3030"></div>
+  <button class="save" id="save">Speichern</button><button id="close">Schließen</button>
+  <div class="note">Der Balken bleibt immer ein einziger Balken. Bei jedem RPM-Bereich wird der komplette gefüllte Teil automatisch in die eingestellte Farbe gewechselt. Die Einstellungen werden auf dem Gerät gespeichert.</div>
 </div>
 
 <script>
 const $=id=>document.getElementById(id);
-const fmtTime=ms=>{if(ms==null||ms<0)return '--:--.---';const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000),x=ms%1000;return `${m}:${String(s).padStart(2,'0')}.${String(x).padStart(3,'0')}`};
-const fmtDelta=ms=>{if(ms==null)return '0.000 s';const sign=ms>0?'+':ms<0?'−':'';return `${sign}${Math.abs(ms/1000).toFixed(3)} s`};
-function set(id,v){const e=$(id);if(e)e.textContent=v}
-function update(d){
- set('speed',Number(d.speed||0).toFixed(1));set('gear',(d.gear||0)===0?'N':d.gear);set('rpm',Math.round(d.rpm||0));set('throttle',`${Math.round(d.throttle||0)}%`);set('brake',`${Math.round(d.brake||0)}%`);set('fuel',Number(d.fuel||0).toFixed(1));set('position',`${d.position||0}/${d.cars||0}`);set('lap',`${d.lap||0}/${d.total_laps>0?d.total_laps:'?'}`);set('bestLap',fmtTime(d.best_lap_ms));set('lastLap',fmtTime(d.last_lap_ms));set('currentLap',fmtTime(d.current_lap_ms));set('reference',fmtTime(d.reference_ms));set('delta',fmtDelta(d.delta_ms));
- $('throttleFill').style.width=Math.max(0,Math.min(100,d.throttle||0))+'%';$('brakeFill').style.width=Math.max(0,Math.min(100,d.brake||0))+'%';
- const q=JSON.parse(localStorage.getItem('sd_rpm')||'null')||{max:9000,t1:5000,t2:6500,t3:8000,c1:'#20e040',c2:'#ffd400',c3:'#ff8f00',c4:'#ff2f2f'};const r=Number(d.rpm||0);$('rpmFill').style.width=Math.max(0,Math.min(100,(r/q.max)*100))+'%';$('rpmFill').style.background=rpmColor(r,q);
- const live=$('liveText').parentElement;live.className='headerBlock liveBlock '+(d.connected?'on':'off');$('liveText').textContent=d.connected?'LIVE':'OFFLINE';
- const card=document.querySelector('[data-id="delta"]');card.classList.remove('faster','slower','equal');const x=d.delta_ms;if(x==null){card.classList.add('equal');set('deltaState','KEINE REFERENZ')}else if(x<-50){card.classList.add('faster');set('deltaState','SCHNELLER')}else if(x>50){card.classList.add('slower');set('deltaState','LANGSAMER')}else{card.classList.add('equal');set('deltaState','GLEICH')}
-}
-async function poll(){try{const r=await fetch('/api?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;update(await r.json())}catch(e){$('liveText').textContent='OFFLINE'}setTimeout(poll,120)}poll();
+const defaults={r1:5000,r2:6500,r3:7200,r4:9000,c1:"#00e676",c2:"#ffd400",c3:"#ff8f00",c4:"#ff3030"};
+let cfg=JSON.parse(localStorage.getItem("sd_rpm_cfg")||"null")||defaults;
+function loadCfg(){Object.keys(defaults).forEach(k=>$(k).value=cfg[k])}
+loadCfg();
 
-document.querySelectorAll('.headerBlock').forEach(x=>x.classList.remove('widget'));
-const defaults={
- speed:{c:4,r:1},gear:{c:4,r:1},rpm:{c:4,r:1},throttle:{c:4,r:1},brake:{c:4,r:1},fuel:{c:4,r:1},position:{c:3,r:1},delta:{c:6,r:2},current:{c:3,r:1},lap:{c:3,r:1},best:{c:3,r:1},last:{c:3,r:1}
+function fmtTime(ms){
+ if(ms==null||ms<0)return"--:--.---";
+ const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000),x=ms%1000;
+ return `${m}:${String(s).padStart(2,"0")}.${String(x).padStart(3,"0")}`;
+}
+function fmtDelta(ms){
+ if(ms==null)return"0.000 s";
+ return `${ms>0?"+":ms<0?"−":""}${Math.abs(ms/1000).toFixed(3)} s`;
+}
+function rpmColor(rpm){
+ if(rpm<=cfg.r1)return cfg.c1;
+ if(rpm<=cfg.r2)return cfg.c2;
+ if(rpm<=cfg.r3)return cfg.c3;
+ return cfg.c4;
+}
+function update(d){
+ $("speed").textContent=Number(d.speed||0).toFixed(1);
+ $("gear").textContent=(d.gear||0)===0?"N":d.gear;
+ const rpm=Math.round(d.rpm||0); $("rpm").textContent=rpm;
+ $("throttle").textContent=Math.round(d.throttle||0)+"%";
+ $("brake").textContent=Math.round(d.brake||0)+"%";
+ $("fuel").textContent=Number(d.fuel||0).toFixed(1);
+ $("position").textContent=(d.position||0)+"/"+(d.cars||0);
+ $("lap").textContent=(d.lap||0)+"/"+(d.total_laps>0?d.total_laps:"?");
+ $("bestLap").textContent=fmtTime(d.best_lap_ms);
+ $("lastLap").textContent=fmtTime(d.last_lap_ms);
+ $("currentLap").textContent=fmtTime(d.current_lap_ms);
+ $("throttleFill").style.width=Math.max(0,Math.min(100,d.throttle||0))+"%";
+ $("brakeFill").style.width=Math.max(0,Math.min(100,d.brake||0))+"%";
+
+ const maxRpm=Math.max(9000,cfg.r4);
+ const pct=Math.max(0,Math.min(100,rpm/maxRpm*100));
+ const fill=$("rpmFill"); fill.style.width=pct+"%"; fill.style.background=rpmColor(rpm);
+
+ const live=$("live");live.className="status "+(d.connected?"on":"off");
+ $("liveText").textContent=d.connected?"LIVE":"OFFLINE";
+
+ const card=$("deltaCard"),delta=d.delta_ms;
+ card.classList.remove("faster","slower","equal");
+ if(delta==null){card.classList.add("equal");$("deltaState").textContent="KEINE REFERENZ"}
+ else if(delta<-50){card.classList.add("faster");$("deltaState").textContent="SCHNELLER"}
+ else if(delta>50){card.classList.add("slower");$("deltaState").textContent="LANGSAMER"}
+ else{card.classList.add("equal");$("deltaState").textContent="GLEICH"}
+ $("delta").textContent=fmtDelta(delta);$("reference").textContent=fmtTime(d.reference_ms);
+}
+async function poll(){
+ try{const r=await fetch("/api?ts="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;update(await r.json())}
+ catch(e){$("live").className="status off";$("liveText").textContent="OFFLINE"}
+ setTimeout(poll,120);
+}
+$("settingsBtn").onclick=()=>{loadCfg();$("panel").classList.add("open")};
+$("close").onclick=()=>$("panel").classList.remove("open");
+$("save").onclick=()=>{
+ const next={};
+ ["r1","r2","r3","r4"].forEach(k=>next[k]=Math.max(1,Number($(k).value)||defaults[k]));
+ ["c1","c2","c3","c4"].forEach(k=>next[k]=$(k).value);
+ if(!(next.r1<next.r2&&next.r2<next.r3&&next.r3<=next.r4)){alert("Die RPM-Grenzen müssen aufsteigend sein.");return}
+ cfg=next;localStorage.setItem("sd_rpm_cfg",JSON.stringify(cfg));$("panel").classList.remove("open");
 };
-let layout=JSON.parse(localStorage.getItem('sd_layout')||'null')||{};
-function applyLayout(){for(const [id,d] of Object.entries(defaults)){const el=document.querySelector(`[data-id="${id}"]`);const v=layout[id]||d;el.style.gridColumn=`span ${v.c||d.c}`;el.style.gridRow=`span ${v.r||d.r}`}}
-applyLayout();
-let edit=false,active=null,start=null;
-function beginEditor(){edit=true;document.body.classList.add('editor');$('editorPanel').classList.remove('hidden');document.querySelectorAll('.widget').forEach(w=>{const h=document.createElement('div');h.className='resize';h.dataset.resize='1';w.appendChild(h);w.addEventListener('pointerdown',dragStart)});syncRpmInputs()}
-function endEditor(save=true){if(save)localStorage.setItem('sd_layout',JSON.stringify(layout));edit=false;document.body.classList.remove('editor');$('editorPanel').classList.add('hidden');document.querySelectorAll('.resize').forEach(x=>x.remove());document.querySelectorAll('.widget').forEach(w=>w.removeEventListener('pointerdown',dragStart));active=null}
-function dragStart(e){if(!edit)return;const el=e.currentTarget;if(e.target.dataset.resize){resizeStart(e,el);return}active=el;document.querySelectorAll('.widget').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');$('widgetSelect').value=el.dataset.id;start={x:e.clientX,y:e.clientY,c:layout[el.dataset.id]?.c||defaults[el.dataset.id].c,r:layout[el.dataset.id]?.r||defaults[el.dataset.id].r};el.setPointerCapture(e.pointerId);el.onpointermove=dragMove;el.onpointerup=dragEnd}
-function dragMove(e){if(!active)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;const cellW=Math.max(20,$('dashboard').clientWidth/12),cellH=88;let c=Math.max(1,Math.min(12,start.c+Math.round(dx/(cellW*1.3))));let r=Math.max(1,Math.min(4,start.r+Math.round(dy/(cellH*1.3))));layout[active.dataset.id]={c,r};applyLayout()}
-function dragEnd(){if(active){active.onpointermove=null;active.onpointerup=null;}}
-function resizeStart(e,el){e.stopPropagation();active=el;start={x:e.clientX,y:e.clientY,c:layout[el.dataset.id]?.c||defaults[el.dataset.id].c,r:layout[el.dataset.id]?.r||defaults[el.dataset.id].r};el.setPointerCapture(e.pointerId);el.onpointermove=resizeMove;el.onpointerup=dragEnd}
-function resizeMove(e){const cellW=Math.max(20,$('dashboard').clientWidth/12),cellH=88;const c=Math.max(1,Math.min(12,start.c+Math.round((e.clientX-start.x)/(cellW*1.3))));const r=Math.max(1,Math.min(4,start.r+Math.round((e.clientY-start.y)/(cellH*1.3))));layout[active.dataset.id]={c,r};applyLayout()}
-$('editBtn').onclick=beginEditor;$('closeEditor').onclick=()=>endEditor(true);$('saveBtn').onclick=()=>{localStorage.setItem('sd_layout',JSON.stringify(layout));applyRpm();endEditor(false)};$('resetBtn').onclick=()=>{layout={};localStorage.removeItem('sd_layout');applyLayout();syncRpmInputs()};
-$('widgetSelect').onchange=e=>{const el=document.querySelector(`[data-id="${e.target.value}"]`);document.querySelectorAll('.widget').forEach(x=>x.classList.remove('selected'));el.classList.add('selected')};
-function rpmCfg(){return {max:Number($('rpmMax').value)||9000,t1:Number($('rpmT1').value)||5000,t2:Number($('rpmT2').value)||6500,t3:Number($('rpmT3').value)||8000,c1:$('rpmC1').value,c2:$('rpmC2').value,c3:$('rpmC3').value,c4:$('rpmC4').value}}
-function syncRpmInputs(){const q=JSON.parse(localStorage.getItem('sd_rpm')||'null')||{max:9000,t1:5000,t2:6500,t3:8000,c1:'#20e040',c2:'#ffd400',c3:'#ff8f00',c4:'#ff2f2f'};$('rpmMax').value=q.max;$('rpmT1').value=q.t1;$('rpmT2').value=q.t2;$('rpmT3').value=q.t3;$('rpmC1').value=q.c1;$('rpmC2').value=q.c2;$('rpmC3').value=q.c3;$('rpmC4').value=q.c4;applyRpm(q)}
-function rpmColor(r,q){if(r<q.t1)return q.c1;if(r<q.t2)return q.c2;if(r<q.t3)return q.c3;return q.c4}
-function applyRpm(q){q=q||rpmCfg();localStorage.setItem('sd_rpm',JSON.stringify(q));localStorage.setItem('sd_rpm_max',q.max);const fill=document.querySelector('.rpmbar .fill');if(fill)fill.style.background=q.c1}
-syncRpmInputs();
+poll();
 </script>
 </body>
 </html>
