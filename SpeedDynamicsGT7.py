@@ -115,6 +115,7 @@ class Bridge:
         self.running = False
         self.mode = "C"
         self.reference = None
+        self.reference_source = None
         self.lap_start = None
         self.last_lap = None
 
@@ -169,15 +170,20 @@ class Bridge:
                 p = parse_packet(plain)
 
                 # Reference/Delta:
-                # Packet C supplies the live current-lap time. The completed
-                # lap is in last_lap_ms when the lap counter changes.
-                # The previous code used the NEW lap's current_lap_ms at the
-                # lap transition, when that value has just reset.
+                # The reference MUST be the real GT7 best lap whenever GT7
+                # provides one.  A partially elapsed lap measured by the
+                # bridge must NEVER replace that best lap.  That was the bug
+                # causing values such as "Referenz: 0:10.961" while GT7
+                # showed a real Best Lap of 0:14.236.
                 #
-                # If GT7 already knows a best lap, use it immediately. This
-                # also works when the bridge is started after several laps.
+                # If GT7 has no best lap yet, a completed lap may be used as
+                # a temporary reference.  As soon as GT7 supplies a best lap,
+                # that real value takes priority.
                 if p["best_lap_ms"] > 0:
-                    if self.reference is None or p["best_lap_ms"] < self.reference:
+                    if self.reference is None or self.reference_source != "best":
+                        self.reference = p["best_lap_ms"]
+                        self.reference_source = "best"
+                    elif p["best_lap_ms"] < self.reference:
                         self.reference = p["best_lap_ms"]
 
                 if p["packet"] == "A":
@@ -189,10 +195,14 @@ class Bridge:
                         completed = p["last_lap_ms"]
                         if completed <= 0 and self.lap_start is not None:
                             completed = int((now - self.lap_start) * 1000)
-                        if completed > 0 and (
-                            self.reference is None or completed < self.reference
-                        ):
-                            self.reference = completed
+
+                        # Only use a completed lap as fallback when GT7 has
+                        # not supplied a real best lap.
+                        if completed > 0 and self.reference_source != "best":
+                            if self.reference is None or completed < self.reference:
+                                self.reference = completed
+                                self.reference_source = "completed"
+
                         self.lap_start = now
                         self.last_lap = p["lap"]
 
@@ -201,16 +211,17 @@ class Bridge:
                     p["current_lap_ms"] = int((now - self.lap_start) * 1000)
 
                 else:
-                    # Packet C: detect completed laps, but never use the
-                    # freshly reset current_lap_ms as the completed lap.
+                    # Packet C: detect completed laps, but never let the
+                    # freshly reset current_lap_ms or a partial measurement
+                    # overwrite GT7's real best-lap reference.
                     if self.last_lap is None:
                         self.last_lap = p["lap"]
                     elif p["lap"] != self.last_lap:
                         completed = p["last_lap_ms"]
-                        if completed > 0 and (
-                            self.reference is None or completed < self.reference
-                        ):
-                            self.reference = completed
+                        if completed > 0 and self.reference_source != "best":
+                            if self.reference is None or completed < self.reference:
+                                self.reference = completed
+                                self.reference_source = "completed"
                         self.last_lap = p["lap"]
 
                 delta = None
