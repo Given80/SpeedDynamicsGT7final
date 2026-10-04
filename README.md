@@ -1,13 +1,17 @@
-[README.md](https://github.com/user-attachments/files/33028551/README.md)
-# Speed Dynamics GT7 – Design + Working Telemetry Base
+[README.txt](https://github.com/user-attachments/files/33028756/README.txt)
+Speed Dynamics GT7 – technische Korrektur
 
-This build keeps the proven `SpeedDynamicsGT7.py` telemetry/UDP implementation from the working version and uses the selected Speed Dynamics dashboard design as `web/index.html`.
+Basis:
+- Design bleibt unverändert aus der bestätigten FINAL_DESIGN-Version.
+- Python-Technik verwendet die funktionierende Live-Delta-Position-Logik.
 
-## Structure
-- SpeedDynamicsGT7.py
-- requirements.txt
-- README.md
-- web/index.html
+In GitHub ersetzen:
+1. SpeedDynamicsGT7.py
+2. web/index.html
 
-## Build
-PyInstaller can package the Python application together with the `web` directory.
+Die vorhandenen Design-Dateien in web/ NICHT ändern:
+- speed_dynamics_logo.png
+- car_silhouette.png
+- gt7_mark.png
+
+Keine neue requirements.txt und keine Änderung am Workflow nötig.
