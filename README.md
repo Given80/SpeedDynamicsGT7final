@@ -1,11 +1,17 @@
-# Speed Dynamics GT7 – Complete Edition
+[README_DELTA_LIVE_V2.txt](https://github.com/user-attachments/files/33024707/README_DELTA_LIVE_V2.txt)
+Speed Dynamics GT7 – Delta Live V2
 
-Clean repository build based on the working V0.5 experience.
+Replace these two files in the existing repository:
+1. SpeedDynamicsGT7.py (repository root)
+2. web/index.html (inside the existing web folder)
 
-- UDP receive port: 33740
-- GT7 request port: 33739
-- Packet C requested first
-- Packet A fallback keeps the proven V0.5 telemetry path alive
-- iPhone dashboard on port 8080
-- Diagnostics show packet size, valid packets and active packet mode
-- GitHub Actions builds a Windows EXE automatically
+Do NOT change the existing GitHub Actions workflow.
+The workflow already builds the Windows EXE with --add-data "web;web".
+
+Delta behavior:
+- Records complete laps with GT7 position coordinates.
+- Keeps the fastest complete recorded lap as spatial reference.
+- During the current lap, compares the car against the reference at the same track position.
+- Updates the browser dashboard about 4 times per second.
+- Negative delta = faster; positive delta = slower.
+- The first complete lap after starting this version becomes the initial reference.
