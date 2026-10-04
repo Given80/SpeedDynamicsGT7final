@@ -1,4 +1,4 @@
-import json, os, socket, struct, sys, threading, time, math
+import json, os, socket, struct, sys, threading, time
 from pathlib import Path
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import tkinter as tk
@@ -19,9 +19,7 @@ state = {
     "fuel_capacity": 0.0, "lap": 0, "total_laps": 0,
     "best_lap_ms": -1, "last_lap_ms": -1, "current_lap_ms": -1,
     "position": 0, "cars": 0, "delta_ms": None,
-    "reference_ms": None, "reference_ready": False,
-    "reference_source": "", "reference_samples": 0,
-    "pos_x": 0.0, "pos_y": 0.0, "pos_z": 0.0
+    "reference_ms": None, "reference_ready": False
 }
 lock = threading.Lock()
 
@@ -65,10 +63,6 @@ def i32(d, o):
 
 def parse_common(d):
     return {
-        # GT7 Packet A/C world position. X/Y/Z are at 0x04/0x08/0x0C.
-        "pos_x": f32(d, 0x04),
-        "pos_y": f32(d, 0x08),
-        "pos_z": f32(d, 0x0C),
         "speed": max(0.0, f32(d, 0x4C) * 3.6),
         "rpm": max(0, round(f32(d, 0x3C))),
         "fuel": max(0.0, f32(d, 0x44)),
@@ -82,13 +76,17 @@ def parse_common(d):
         "gear": d[0x90] & 0x0F,
         "throttle": round(d[0x91] / 255 * 100),
         "brake": round(d[0x92] / 255 * 100),
+        "pos_xyz": (f32(d, 0x04), f32(d, 0x08), f32(d, 0x0C)),
     }
 
 def parse_packet(plain):
     p = parse_common(plain[:296])
     if len(plain) >= 368:
-        # Packet C: exact live current-lap timer.
-        p["current_lap_ms"] = i32(plain, 0x140)
+        # Packet C appends to the 296-byte base packet: 4 bytes surface +
+        # 4 bytes current-lap timer. Therefore currentLap starts at 0x12C.
+        # 0x140 is 20 bytes too late and was the reason the dashboard showed
+        # 0:00.000 even though GT7 was already several seconds into the lap.
+        p["current_lap_ms"] = i32(plain, 0x12C)
         p["packet"] = "C"
     else:
         p["current_lap_ms"] = -1
@@ -108,7 +106,6 @@ class Handler(SimpleHTTPRequestHandler):
             self.wfile.write(payload)
         else:
             super().do_GET()
-
     def log_message(self, *args):
         pass
 
@@ -117,29 +114,19 @@ def start_web():
     ThreadingHTTPServer(("0.0.0.0", WEB_PORT), Handler).serve_forever()
 
 class Bridge:
-    """
-    Live delta implementation:
-    - GT7 Packet C supplies the exact current lap timer and world position.
-    - A completed lap is recorded as (world X/Z position, elapsed lap time).
-    - The fastest completed recorded lap becomes the reference trace.
-    - During the next lap, the current X/Z position is matched to the
-      corresponding nearby point on that reference trace.
-    - Delta = current elapsed time - reference elapsed time at the same track
-      position. It therefore does NOT simply count down to zero at the finish.
-    """
-
     def __init__(self, ip, status):
         self.ip = ip
         self.status = status
         self.running = False
         self.mode = "C"
-
+        self.reference = None
+        self.reference_source = None
+        self.reference_samples = []
+        self.current_samples = []
+        self.last_pos = None
         self.last_lap = None
-        self.current_trace = []
-        self.reference_trace = []
-        self.reference_ms = None
-        self.reference_source = ""
-        self.last_ref_idx = 0
+        self.ref_index = 0
+        self.have_full_lap = False
 
     def start(self):
         self.running = True
@@ -147,82 +134,6 @@ class Bridge:
 
     def stop(self):
         self.running = False
-
-    @staticmethod
-    def _distance_sq(a, b):
-        dx = a[0] - b[0]
-        dz = a[1] - b[1]
-        return dx * dx + dz * dz
-
-    def _finish_lap(self, completed_ms):
-        # Ignore tiny/invalid laps.
-        if completed_ms <= 1000 or len(self.current_trace) < 20:
-            self.current_trace = []
-            return
-
-        # Store the actual completed lap as a spatial time trace.
-        candidate = self.current_trace[:]
-
-        # The reference should be the fastest completed lap that we have
-        # actually recorded, because a GT7 best-lap number alone contains no
-        # historical position/time trace.
-        if self.reference_ms is None or completed_ms < self.reference_ms:
-            self.reference_ms = int(completed_ms)
-            self.reference_trace = candidate
-            self.reference_source = "recorded"
-            self.last_ref_idx = 0
-
-        self.current_trace = []
-
-    def _live_delta(self, x, z, current_ms):
-        if not self.reference_trace or current_ms < 0:
-            return None
-
-        n = len(self.reference_trace)
-        # Search locally to keep the mapping stable on corners and avoid
-        # jumping to a nearby but wrong section of the circuit.
-        lo = max(0, self.last_ref_idx - 25)
-        hi = min(n, self.last_ref_idx + 180)
-
-        best_i = self.last_ref_idx
-        best_d = float("inf")
-        for i in range(lo, hi):
-            rx, rz, _rt = self.reference_trace[i]
-            d = (x - rx) * (x - rx) + (z - rz) * (z - rz)
-            if d < best_d:
-                best_d = d
-                best_i = i
-
-        # If the local window is not close enough, make a wider search.
-        # This is mainly useful immediately after a slow/very different lap.
-        if best_d > 400.0:
-            step = 3
-            for i in range(0, n, step):
-                rx, rz, _rt = self.reference_trace[i]
-                d = (x - rx) * (x - rx) + (z - rz) * (z - rz)
-                if d < best_d:
-                    best_d = d
-                    best_i = i
-
-        self.last_ref_idx = best_i
-
-        # Interpolate between neighboring reference samples for a smoother
-        # live value instead of a staircase.
-        if best_i <= 0:
-            ref_t = self.reference_trace[0][2]
-        elif best_i >= n - 1:
-            ref_t = self.reference_trace[-1][2]
-        else:
-            x1, z1, t1 = self.reference_trace[best_i - 1]
-            x2, z2, t2 = self.reference_trace[best_i]
-            d1 = math.hypot(x - x1, z - z1)
-            d2 = math.hypot(x - x2, z - z2)
-            if d1 + d2 > 0:
-                ref_t = t1 + (t2 - t1) * (d1 / (d1 + d2))
-            else:
-                ref_t = t2
-
-        return int(round(current_ms - ref_t))
 
     def run(self):
         try:
@@ -240,7 +151,6 @@ class Bridge:
 
         while self.running:
             now = time.monotonic()
-
             if now - last_request >= 1:
                 try:
                     sock.sendto(self.mode.encode(), (self.ip, SEND_PORT))
@@ -250,7 +160,6 @@ class Bridge:
 
             try:
                 raw, _ = sock.recvfrom(4096)
-
                 with lock:
                     state["packets"] += 1
                     state["bytes"] += len(raw)
@@ -258,58 +167,85 @@ class Bridge:
 
                 plain = decrypt_packet(raw, self.mode)
 
+                # If Packet C is unavailable after a short test period,
+                # automatically use the proven V0.5 Packet-A path.
                 if plain is None and self.mode == "C" and now - started > 4:
                     self.mode = "A"
-                    self.status("Packet C nicht erkannt · Packet A wird verwendet")
+                    self.status("Packet C nicht erkannt · V0.5 Packet A wird verwendet")
                     continue
-
                 if plain is None:
                     continue
 
                 p = parse_packet(plain)
 
-                if p["packet"] == "A":
-                    self.mode = "A"
-                    # Packet A has no exact live-lap field, so maintain a local
-                    # timer only as a fallback.
-                    if self.last_lap is None:
-                        self.last_lap = p["lap"]
-                        self.local_lap_start = now
-                    elif p["lap"] != self.last_lap:
-                        completed = p["last_lap_ms"]
-                        if completed <= 0 and hasattr(self, "local_lap_start"):
-                            completed = int((now - self.local_lap_start) * 1000)
-                        self._finish_lap(completed)
-                        self.last_lap = p["lap"]
-                        self.local_lap_start = now
-
-                    if not hasattr(self, "local_lap_start"):
-                        self.local_lap_start = now
-
-                    p["current_lap_ms"] = int((now - self.local_lap_start) * 1000)
-
-                else:
-                    # Packet C supplies the exact current lap timer.
-                    if self.last_lap is None:
-                        self.last_lap = p["lap"]
-                    elif p["lap"] != self.last_lap:
-                        completed = p["last_lap_ms"]
-                        self._finish_lap(completed)
-                        self.last_lap = p["lap"]
-
+                # Live lap / reference handling. Packet C now supplies the
+                # real current-lap timer. For a useful corner-by-corner delta,
+                # compare the current car position against a completed lap
+                # captured by this bridge instead of subtracting the full
+                # reference-lap time (which would incorrectly drift toward 0
+                # at the finish line).
                 current_ms = p["current_lap_ms"]
+                if current_ms < 0:
+                    current_ms = 0
 
-                # Record the current lap continuously.  30 Hz is sufficient
-                # for a spatial live delta and keeps traces compact.
-                if current_ms >= 0:
-                    if not self.current_trace or current_ms - self.current_trace[-1][2] >= 33:
-                        self.current_trace.append(
-                            (p["pos_x"], p["pos_z"], current_ms)
-                        )
+                lap_changed = self.last_lap is not None and p["lap"] != self.last_lap
 
-                delta = self._live_delta(
-                    p["pos_x"], p["pos_z"], current_ms
-                )
+                if self.last_lap is None:
+                    self.last_lap = p["lap"]
+                    self.current_samples = []
+                    self.last_pos = None
+                elif lap_changed:
+                    # Only a genuinely completed, fully captured lap becomes
+                    # a reference. A partial first lap is ignored.
+                    if self.current_samples:
+                        completed_ms = p["last_lap_ms"]
+                        if self.have_full_lap and completed_ms > 1000:
+                            if (self.reference is None or
+                                self.reference_source is None or
+                                completed_ms < self.reference):
+                                self.reference = completed_ms
+                                self.reference_source = "captured"
+                                self.reference_samples = list(self.current_samples)
+                    self.current_samples = []
+                    self.last_pos = None
+                    self.ref_index = 0
+                    self.have_full_lap = True
+                    self.last_lap = p["lap"]
+
+                # Record the current lap's trajectory at roughly 30 Hz.
+                pos = p.get("pos_xyz")
+                if pos is not None:
+                    if self.last_pos is None:
+                        self.last_pos = pos
+                    self.current_samples.append((current_ms, pos[0], pos[1], pos[2]))
+                    # Prevent an accidental runaway list.
+                    if len(self.current_samples) > 4000:
+                        self.current_samples = self.current_samples[-4000:]
+                    self.last_pos = pos
+
+                # Point-by-point live delta against the captured reference lap.
+                delta = None
+                if self.reference_samples and pos is not None:
+                    # Search near the previous reference point; allow a wider
+                    # window at the beginning so braking/line differences do
+                    # not make the comparison jump backwards.
+                    n = len(self.reference_samples)
+                    lo = max(0, self.ref_index - 80)
+                    hi = min(n, self.ref_index + 180)
+                    best_i = self.ref_index
+                    best_d = float("inf")
+                    px, py, pz = pos
+                    for i in range(lo, hi):
+                        _, rx, ry, rz = self.reference_samples[i]
+                        d2 = (px-rx)*(px-rx) + (py-ry)*(py-ry) + (pz-rz)*(pz-rz)
+                        if d2 < best_d:
+                            best_d = d2
+                            best_i = i
+                    self.ref_index = best_i
+                    ref_ms = self.reference_samples[best_i][0]
+                    delta = current_ms - ref_ms
+
+                p["current_lap_ms"] = current_ms
 
                 with lock:
                     state.update(p)
@@ -317,17 +253,14 @@ class Bridge:
                     state["mode"] = p["packet"]
                     state["valid"] += 1
                     state["delta_ms"] = delta
-                    state["reference_ms"] = self.reference_ms
-                    state["reference_ready"] = bool(self.reference_trace)
-                    state["reference_source"] = self.reference_source
-                    state["reference_samples"] = len(self.reference_trace)
+                    state["reference_ms"] = self.reference
+                    state["reference_ready"] = self.reference is not None
                     valid = state["valid"]
 
                 self.status(
                     f"GT7 LIVE VERBUNDEN · Packet {p['packet']} · "
                     f"{len(raw)} Bytes · gültige Pakete: {valid}"
                 )
-
             except socket.timeout:
                 pass
             except Exception as e:
@@ -372,15 +305,13 @@ class App:
                  fg="#dddddd", bg="#111111",
                  wraplength=580, justify="left").pack(anchor="w", pady=(16, 8))
 
-        self.diag = tk.StringVar(
-            value="Empfangen: 0    Gültig: 0    Bytes: 0    Paket: 0"
-        )
+        self.diag = tk.StringVar(value="Empfangen: 0    Gültig: 0    Bytes: 0    Paket: 0")
         tk.Label(box, textvariable=self.diag,
                  font=("Consolas", 9),
                  fg="#aaaaaa", bg="#111111").pack(anchor="w", pady=(2, 14))
 
         self.url = f"http://{lan_ip()}:{WEB_PORT}"
-        tk.Label(box, text="Tablet/Handy – im selben WLAN öffnen:",
+        tk.Label(box, text="iPhone – im selben WLAN in Safari öffnen:",
                  font=("Segoe UI", 9),
                  fg="#888888", bg="#111111").pack(anchor="w")
         tk.Label(box, text=self.url,
@@ -395,44 +326,34 @@ class App:
 
     def status(self, text):
         with lock:
-            d = (
-                f"Empfangen: {state['packets']}    "
-                f"Gültig: {state['valid']}    "
-                f"Bytes: {state['bytes']}    "
-                f"Paket: {state['packet_size']}"
-            )
-        self.root.after(
-            0, lambda: (self.msg.set(text), self.diag.set(d))
-        )
+            d = (f"Empfangen: {state['packets']}    "
+                 f"Gültig: {state['valid']}    "
+                 f"Bytes: {state['bytes']}    "
+                 f"Paket: {state['packet_size']}")
+        self.root.after(0, lambda: (self.msg.set(text), self.diag.set(d)))
 
     def connect(self):
         ip = self.ip.get().strip()
         try:
             socket.inet_aton(ip)
         except OSError:
-            messagebox.showerror(
-                "PS5-IP", "Bitte eine gültige PS5-IP eingeben."
-            )
+            messagebox.showerror("PS5-IP", "Bitte eine gültige PS5-IP eingeben.")
             return
-
         if self.bridge:
             self.bridge.stop()
-
         with lock:
             state.update({
                 "connected": False, "mode": "", "packets": 0, "valid": 0,
                 "bytes": 0, "packet_size": 0, "delta_ms": None,
-                "reference_ms": None, "reference_ready": False,
-                "reference_source": "", "reference_samples": 0
+                "reference_ms": None, "reference_ready": False
             })
-
         self.bridge = Bridge(ip, self.status)
         self.bridge.start()
 
     def copy_url(self):
         self.root.clipboard_clear()
         self.root.clipboard_append(self.url)
-        self.msg.set("Adresse kopiert")
+        self.msg.set("iPhone-Adresse kopiert")
 
     def run(self):
         self.root.mainloop()
