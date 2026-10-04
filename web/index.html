@@ -122,7 +122,7 @@ body{padding:clamp(7px,1.2vw,18px)}
     <section class="card fuel"><div class="label">FUEL</div><div id="fuel" class="value">0.0</div><div class="unit">Liter</div></section>
 
     <section class="card position"><div class="label">POSITION</div><div id="position" class="value">-/–</div></section>
-    <section id="deltaCard" class="card delta equal"><div class="label">RUNDEN-DELTA</div><div id="delta" class="value">0.000 s</div><div id="deltaState" class="state">KEINE REFERENZ</div><div class="ref">Referenz: <span id="reference">--:--.---</span></div></section>
+    <section id="deltaCard" class="card delta equal"><div class="label">RUNDEN-DELTA</div><div id="delta" class="value">0.000 s</div><div id="deltaState" class="state">REFERENZFAHRT NÖTIG</div><div class="ref">Referenz: <span id="reference">--:--.---</span></div></section>
     <section class="card current"><div class="label">AKTUELLE RUNDE</div><div id="currentLap" class="value">0:00.000</div></section>
 
     <section class="card lap"><div class="label">RUNDE</div><div id="lap" class="value">0/–</div></section>
@@ -142,7 +142,7 @@ body{padding:clamp(7px,1.2vw,18px)}
   <div class="row"><label>Bereich 4 bis</label><input id="r4" type="number" min="4" value="9000"></div>
   <div class="row"><label>Farbe Bereich 4</label><input id="c4" type="color" value="#ff3030"></div>
   <button class="save" id="save">Speichern</button><button id="close">Schließen</button>
-  <div class="note">Der Balken bleibt immer ein einziger Balken. Bei jedem RPM-Bereich wird der komplette gefüllte Teil automatisch in die eingestellte Farbe gewechselt. Die Einstellungen werden auf dem Gerät gespeichert.</div>
+  <div class="note">Der Balken bleibt immer ein einziger Balken. Der komplette gefüllte Balken wechselt abhängig von der aktuellen Drehzahl in die eingestellte Farbe. Die Einstellungen werden auf dem Gerät gespeichert.</div>
 </div>
 
 <script>
@@ -191,15 +191,36 @@ function update(d){
 
  const card=$("deltaCard"),delta=d.delta_ms;
  card.classList.remove("faster","slower","equal");
- if(delta==null){card.classList.add("equal");$("deltaState").textContent="KEINE REFERENZ"}
- else if(delta<-50){card.classList.add("faster");$("deltaState").textContent="SCHNELLER"}
- else if(delta>50){card.classList.add("slower");$("deltaState").textContent="LANGSAMER"}
- else{card.classList.add("equal");$("deltaState").textContent="GLEICH"}
- $("delta").textContent=fmtDelta(delta);$("reference").textContent=fmtTime(d.reference_ms);
+
+ if(!d.reference_ready){
+   card.classList.add("equal");
+   $("deltaState").textContent="REFERENZFAHRT NÖTIG";
+ } else if(delta==null){
+   card.classList.add("equal");
+   $("deltaState").textContent="GLEICH";
+ } else if(delta<-50){
+   card.classList.add("faster");
+   $("deltaState").textContent="SCHNELLER";
+ } else if(delta>50){
+   card.classList.add("slower");
+   $("deltaState").textContent="LANGSAMER";
+ } else {
+   card.classList.add("equal");
+   $("deltaState").textContent="GLEICH";
+ }
+
+ $("delta").textContent=fmtDelta(delta);
+ $("reference").textContent=fmtTime(d.reference_ms);
 }
 async function poll(){
- try{const r=await fetch("/api?ts="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;update(await r.json())}
- catch(e){$("live").className="status off";$("liveText").textContent="OFFLINE"}
+ try{
+   const r=await fetch("/api?ts="+Date.now(),{cache:"no-store"});
+   if(!r.ok)throw 0;
+   update(await r.json())
+ }catch(e){
+   $("live").className="status off";
+   $("liveText").textContent="OFFLINE"
+ }
  setTimeout(poll,120);
 }
 $("settingsBtn").onclick=()=>{loadCfg();$("panel").classList.add("open")};
@@ -208,7 +229,9 @@ $("save").onclick=()=>{
  const next={};
  ["r1","r2","r3","r4"].forEach(k=>next[k]=Math.max(1,Number($(k).value)||defaults[k]));
  ["c1","c2","c3","c4"].forEach(k=>next[k]=$(k).value);
- if(!(next.r1<next.r2&&next.r2<next.r3&&next.r3<=next.r4)){alert("Die RPM-Grenzen müssen aufsteigend sein.");return}
+ if(!(next.r1<next.r2&&next.r2<next.r3&&next.r3<=next.r4)){
+   alert("Die RPM-Grenzen müssen aufsteigend sein.");return
+ }
  cfg=next;localStorage.setItem("sd_rpm_cfg",JSON.stringify(cfg));$("panel").classList.remove("open");
 };
 poll();
