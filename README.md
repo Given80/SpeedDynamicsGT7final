@@ -1,17 +1,8 @@
-[README_DELTA_LIVE_V2.txt](https://github.com/user-attachments/files/33025132/README_DELTA_LIVE_V2.txt)
-Speed Dynamics GT7 – Delta Live V2
+[README.txt](https://github.com/user-attachments/files/33026936/README.txt)
+SPEED DYNAMICS GT7 – FINAL DESIGN UPDATE
 
-Replace these two files in the existing repository:
-1. SpeedDynamicsGT7.py (repository root)
-2. web/index.html (inside the existing web folder)
-
-Do NOT change the existing GitHub Actions workflow.
-The workflow already builds the Windows EXE with --add-data "web;web".
-
-Delta behavior:
-- Records complete laps with GT7 position coordinates.
-- Keeps the fastest complete recorded lap as spatial reference.
-- During the current lap, compares the car against the reference at the same track position.
-- Updates the browser dashboard about 4 times per second.
-- Negative delta = faster; positive delta = slower.
-- The first complete lap after starting this version becomes the initial reference.
+- Kopfzeile fest: Speed-Dynamics-Logo, goldene Fahrzeug-Silhouette, LIVE, GT7 und kleines Zahnrad.
+- Kopfzeile ist nicht verschiebbar.
+- RPM: ein durchgehender Balken; der gesamte gefüllte Bereich ist immer nur EIN Farbton. 4 Farben und 3 RPM-Grenzen sind einstellbar.
+- Delta: Referenzrunde wird als Distanz/Zeit-Kurve aufgezeichnet. Das Live-Delta vergleicht während der Fahrt an der gleichen zurückgelegten Strecke und aktualisiert laufend. Die erste vollständige Runde wird Referenz; eine schnellere Runde ersetzt sie.
+- __pycache__ nicht hochladen.
