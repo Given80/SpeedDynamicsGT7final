@@ -167,24 +167,51 @@ class Bridge:
                     continue
 
                 p = parse_packet(plain)
+
+                # Reference/Delta:
+                # Packet C supplies the live current-lap time. The completed
+                # lap is in last_lap_ms when the lap counter changes.
+                # The previous code used the NEW lap's current_lap_ms at the
+                # lap transition, when that value has just reset.
+                #
+                # If GT7 already knows a best lap, use it immediately. This
+                # also works when the bridge is started after several laps.
+                if p["best_lap_ms"] > 0:
+                    if self.reference is None or p["best_lap_ms"] < self.reference:
+                        self.reference = p["best_lap_ms"]
+
                 if p["packet"] == "A":
                     self.mode = "A"
-                    # Keep the dashboard alive with an elapsed-lap timer.
-                    if self.last_lap is None or p["lap"] != self.last_lap:
-                        if self.lap_start is not None:
-                            completed = int((now - self.lap_start) * 1000)
-                            if self.reference is None or completed < self.reference:
-                                self.reference = completed
+                    if self.last_lap is None:
                         self.lap_start = now
                         self.last_lap = p["lap"]
+                    elif p["lap"] != self.last_lap:
+                        completed = p["last_lap_ms"]
+                        if completed <= 0 and self.lap_start is not None:
+                            completed = int((now - self.lap_start) * 1000)
+                        if completed > 0 and (
+                            self.reference is None or completed < self.reference
+                        ):
+                            self.reference = completed
+                        self.lap_start = now
+                        self.last_lap = p["lap"]
+
+                    if self.lap_start is None:
+                        self.lap_start = now
                     p["current_lap_ms"] = int((now - self.lap_start) * 1000)
 
-                elif self.last_lap is None or p["lap"] != self.last_lap:
-                    if self.lap_start is not None and p["current_lap_ms"] > 0:
-                        if self.reference is None or p["current_lap_ms"] < self.reference:
-                            self.reference = p["current_lap_ms"]
-                    self.lap_start = now
-                    self.last_lap = p["lap"]
+                else:
+                    # Packet C: detect completed laps, but never use the
+                    # freshly reset current_lap_ms as the completed lap.
+                    if self.last_lap is None:
+                        self.last_lap = p["lap"]
+                    elif p["lap"] != self.last_lap:
+                        completed = p["last_lap_ms"]
+                        if completed > 0 and (
+                            self.reference is None or completed < self.reference
+                        ):
+                            self.reference = completed
+                        self.last_lap = p["lap"]
 
                 delta = None
                 if self.reference is not None and p["current_lap_ms"] >= 0:
