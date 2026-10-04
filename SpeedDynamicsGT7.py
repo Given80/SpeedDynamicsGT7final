@@ -201,12 +201,10 @@ class Bridge:
                     p["current_lap_ms"] = int((now - self.lap_start) * 1000)
 
                 else:
-                    # Packet C: GT7 normally supplies current_lap_ms, but on
-                    # some sessions this field can remain 0 while the lap
-                    # counter and other telemetry continue correctly.
-                    # Keep the proven DELTA_FIX logic and add a local elapsed
-                    # timer as a fallback so the current lap never freezes at
-                    # 0:00.000.
+                    # Packet C: keep the proven DELTA_FIX reference logic.
+                    # Some GT7 sessions report current_lap_ms as 0 even
+                    # though live telemetry is running. Use a local timer
+                    # only for the live current-lap display.
                     if self.last_lap is None:
                         self.last_lap = p["lap"]
                         self.lap_start = now
@@ -215,13 +213,12 @@ class Bridge:
                         self.lap_start = now
 
                     if p["current_lap_ms"] > 0:
-                        current_lap_ms = p["current_lap_ms"]
-                    else:
-                        if self.lap_start is None:
-                            self.lap_start = now
-                        current_lap_ms = int((now - self.lap_start) * 1000)
+                        self.lap_start = now - (p["current_lap_ms"] / 1000.0)
 
-                    p["current_lap_ms"] = current_lap_ms
+                    if self.lap_start is None:
+                        self.lap_start = now
+
+                    p["current_lap_ms"] = int((now - self.lap_start) * 1000)
 
                 delta = None
                 if self.reference is not None and p["current_lap_ms"] >= 0:
