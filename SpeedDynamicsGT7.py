@@ -115,7 +115,6 @@ class Bridge:
         self.running = False
         self.mode = "C"
         self.reference = None
-        self.reference_source = None
         self.lap_start = None
         self.last_lap = None
 
@@ -170,20 +169,15 @@ class Bridge:
                 p = parse_packet(plain)
 
                 # Reference/Delta:
-                # The reference MUST be the real GT7 best lap whenever GT7
-                # provides one.  A partially elapsed lap measured by the
-                # bridge must NEVER replace that best lap.  That was the bug
-                # causing values such as "Referenz: 0:10.961" while GT7
-                # showed a real Best Lap of 0:14.236.
+                # Packet C supplies the live current-lap time. The completed
+                # lap is in last_lap_ms when the lap counter changes.
+                # The previous code used the NEW lap's current_lap_ms at the
+                # lap transition, when that value has just reset.
                 #
-                # If GT7 has no best lap yet, a completed lap may be used as
-                # a temporary reference.  As soon as GT7 supplies a best lap,
-                # that real value takes priority.
+                # If GT7 already knows a best lap, use it immediately. This
+                # also works when the bridge is started after several laps.
                 if p["best_lap_ms"] > 0:
-                    if self.reference is None or self.reference_source != "best":
-                        self.reference = p["best_lap_ms"]
-                        self.reference_source = "best"
-                    elif p["best_lap_ms"] < self.reference:
+                    if self.reference is None or p["best_lap_ms"] < self.reference:
                         self.reference = p["best_lap_ms"]
 
                 if p["packet"] == "A":
@@ -195,14 +189,10 @@ class Bridge:
                         completed = p["last_lap_ms"]
                         if completed <= 0 and self.lap_start is not None:
                             completed = int((now - self.lap_start) * 1000)
-
-                        # Only use a completed lap as fallback when GT7 has
-                        # not supplied a real best lap.
-                        if completed > 0 and self.reference_source != "best":
-                            if self.reference is None or completed < self.reference:
-                                self.reference = completed
-                                self.reference_source = "completed"
-
+                        if completed > 0 and (
+                            self.reference is None or completed < self.reference
+                        ):
+                            self.reference = completed
                         self.lap_start = now
                         self.last_lap = p["lap"]
 
@@ -211,18 +201,27 @@ class Bridge:
                     p["current_lap_ms"] = int((now - self.lap_start) * 1000)
 
                 else:
-                    # Packet C: detect completed laps, but never let the
-                    # freshly reset current_lap_ms or a partial measurement
-                    # overwrite GT7's real best-lap reference.
+                    # Packet C: GT7 normally supplies current_lap_ms, but on
+                    # some sessions this field can remain 0 while the lap
+                    # counter and other telemetry continue correctly.
+                    # Keep the proven DELTA_FIX logic and add a local elapsed
+                    # timer as a fallback so the current lap never freezes at
+                    # 0:00.000.
                     if self.last_lap is None:
                         self.last_lap = p["lap"]
+                        self.lap_start = now
                     elif p["lap"] != self.last_lap:
-                        completed = p["last_lap_ms"]
-                        if completed > 0 and self.reference_source != "best":
-                            if self.reference is None or completed < self.reference:
-                                self.reference = completed
-                                self.reference_source = "completed"
                         self.last_lap = p["lap"]
+                        self.lap_start = now
+
+                    if p["current_lap_ms"] > 0:
+                        current_lap_ms = p["current_lap_ms"]
+                    else:
+                        if self.lap_start is None:
+                            self.lap_start = now
+                        current_lap_ms = int((now - self.lap_start) * 1000)
+
+                    p["current_lap_ms"] = current_lap_ms
 
                 delta = None
                 if self.reference is not None and p["current_lap_ms"] >= 0:
