@@ -157,6 +157,8 @@ class Bridge:
         self.last_lap = None
         self.lap_start_monotonic = None
         self.packet_counter = 0
+        self.last_gt7_current_ms = -1
+        self.last_gt7_change_time = 0.0
 
     def start(self):
         self.running = True
@@ -217,6 +219,8 @@ class Bridge:
         self.last_sample_time = 0.0
         self.reference_cursor = 0
         self.lap_start_monotonic = now
+        self.last_gt7_current_ms = -1
+        self.last_gt7_change_time = now
 
     def calculate_live_delta(self, p):
         if not self.reference_samples:
@@ -313,9 +317,11 @@ class Bridge:
                     )
 
                 else:
-                    # Packet C: use GT7's current lap clock. On a lap change,
-                    # last_lap_ms is the completed lap and current_lap_ms has
-                    # already reset for the new lap.
+                    # Packet C: GT7 normally supplies the live lap clock in
+                    # current_lap. Some streams/versions can expose 0 or a
+                    # frozen value even though the rest of Packet C is valid.
+                    # In that case we fall back to a local monotonic clock,
+                    # anchored exactly at the lap transition.
                     if self.last_lap is None:
                         self.last_lap = p["lap"]
                         self.reset_current_lap(now)
@@ -325,6 +331,26 @@ class Bridge:
                         self.finish_current_lap(completed)
                         self.last_lap = p["lap"]
                         self.reset_current_lap(now)
+
+                    gt7_ms = int(p.get("current_lap_ms", -1))
+                    if gt7_ms > self.last_gt7_current_ms:
+                        self.last_gt7_current_ms = gt7_ms
+                        self.last_gt7_change_time = now
+                    elif self.last_gt7_change_time == 0.0:
+                        self.last_gt7_change_time = now
+
+                    # If GT7's live clock is zero/invalid or has not advanced
+                    # for > 0.75 s while the car is moving, use local time.
+                    # This keeps the dashboard live without changing Packet C.
+                    if (
+                        gt7_ms <= 0
+                        or (now - self.last_gt7_change_time > 0.75 and p["speed"] > 1.0)
+                    ):
+                        if self.lap_start_monotonic is None:
+                            self.lap_start_monotonic = now
+                        p["current_lap_ms"] = int(
+                            (now - self.lap_start_monotonic) * 1000
+                        )
 
                 # Record current trajectory at ~20 Hz.
                 if (
