@@ -3,142 +3,215 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050608">
 <title>Speed Dynamics GT7</title>
 <style>
+:root{
+  --bg:#050608; --panel:#0d1014; --panel2:#11151a; --line:#3a4149;
+  --gold:#f2b900; --gold2:#ffd84d; --text:#f4f5f6; --muted:#8e969f;
+  --green:#00e676; --red:#ff4d4d; --blue:#38a8ff; --purple:#a47cff;
+  --radius:18px; --gap:12px;
+}
 *{box-sizing:border-box}
-body{margin:0;background:#080808;color:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-main{max-width:1280px;margin:0 auto;padding:18px}
-.top{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid #303030;padding:0 4px 14px;margin-bottom:16px}
-.brand{font-size:29px;font-weight:900;letter-spacing:1.5px;color:#d7b45a}
-.sub{font-size:14px;color:#8b8b8b;margin-top:4px;letter-spacing:.4px}
-.status{font-size:16px;font-weight:800;color:#53d26f}
-.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
-.card{background:#121212;border:1px solid #303030;border-radius:16px;padding:16px;min-height:118px;overflow:hidden}
-.label{font-size:15px;color:#8d8d8d;letter-spacing:.4px;margin-bottom:6px}
-.value{font-size:42px;line-height:1.05;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.unit{font-size:15px;color:#999;margin-top:4px}
-.bar{height:14px;background:#2b2b2b;border-radius:9px;margin-top:12px;overflow:hidden}
-.fill{height:100%;width:0;background:#e76b2d;border-radius:9px;transition:width .08s linear}
-.span3{grid-column:span 3}.span4{grid-column:span 4}.span5{grid-column:span 5}
-.span6{grid-column:span 6}.span8{grid-column:span 8}.span9{grid-column:span 9}.span12{grid-column:span 12}
-.delta-card{min-height:150px}
-.delta{font-size:54px;font-weight:900;line-height:1.05;letter-spacing:.5px}
-.delta.positive{color:#ff5c5c}.delta.negative{color:#25c9ff}.delta.zero{color:#e6e6e6}.delta.wait{color:#9a9a9a;font-size:31px}
-.ref{font-size:15px;color:#a0a0a0;margin-top:7px}
-.hint{font-size:13px;color:#777;margin-top:6px}
-@media(max-width:850px){
- main{padding:12px}
- .brand{font-size:22px}.status{font-size:14px}
- .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
- .span3,.span4,.span5,.span6,.span8,.span9,.span12{grid-column:span 1}
- .delta-card{grid-column:span 2}
- .value{font-size:34px}.delta{font-size:46px}
+html,body{margin:0;min-height:100%;background:
+ radial-gradient(circle at 15% 0%,rgba(242,185,0,.07),transparent 28%),
+ linear-gradient(145deg,#030405,#0a0d11 55%,#050608);
+ color:var(--text);font-family:Inter,Segoe UI,Roboto,Arial,sans-serif}
+body{padding:clamp(8px,1.5vw,24px)}
+.app{max-width:1500px;margin:auto}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ padding:4px 4px 14px;border-bottom:1px solid #252a30;margin-bottom:var(--gap)}
+.brand{font-size:clamp(22px,3vw,42px);font-weight:900;letter-spacing:.02em;
+ color:var(--gold);text-shadow:0 0 18px rgba(242,185,0,.18)}
+.subtitle{font-size:clamp(9px,1.1vw,14px);font-weight:700;color:#aeb4ba;letter-spacing:.16em}
+.live{display:flex;align-items:center;gap:7px;font-weight:800;font-size:clamp(10px,1.1vw,15px)}
+.dot{width:10px;height:10px;border-radius:50%;background:#666;box-shadow:0 0 0 3px rgba(255,255,255,.04)}
+.live.on .dot{background:var(--green);box-shadow:0 0 14px rgba(0,230,118,.75)}
+.live.off .dot{background:var(--red)}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--gap)}
+.card{min-width:0;background:
+ linear-gradient(145deg,rgba(255,255,255,.035),transparent 38%),
+ linear-gradient(135deg,var(--panel2),var(--panel));
+ border:1px solid var(--line);border-radius:var(--radius);
+ padding:clamp(12px,1.5vw,20px);box-shadow:0 8px 28px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.025)}
+.label{font-size:clamp(10px,1.15vw,15px);font-weight:800;color:#aeb4ba;letter-spacing:.04em}
+.value{font-size:clamp(30px,4vw,64px);line-height:1;font-weight:900;margin-top:6px;white-space:nowrap}
+.unit{font-size:clamp(10px,1vw,14px);font-weight:700;color:#9ca4ad;margin-top:5px}
+.speed{grid-column:span 4}.gear{grid-column:span 3}.rpm{grid-column:span 5}
+.small{grid-column:span 4}.fuel{grid-column:span 4}.position{grid-column:span 4}
+.delta{grid-column:span 8;min-height:190px;display:flex;flex-direction:column;justify-content:center}
+.current{grid-column:span 4}
+.lap{grid-column:span 3}.best{grid-column:span 3}.last{grid-column:span 3}.mode{grid-column:span 3}
+.bar{height:12px;background:#191e24;border:1px solid #333941;border-radius:99px;overflow:hidden;margin-top:12px}
+.fill{height:100%;width:0%;transition:width .12s linear}
+.throttle .fill{background:linear-gradient(90deg,#00c853,#69f0ae)}
+.brake .fill{background:linear-gradient(90deg,#d50000,#ff5252)}
+.rpmbar .fill{background:linear-gradient(90deg,#ffd400 0 72%,#ff8f00 78%,#ff2f2f 100%)}
+.delta{transition:border-color .18s,box-shadow .18s,background .18s}
+.delta .value{font-size:clamp(52px,7vw,104px);letter-spacing:-.035em}
+.delta .state{font-size:clamp(12px,1.5vw,20px);font-weight:900;letter-spacing:.12em;margin-top:8px}
+.delta .ref{font-size:clamp(11px,1.1vw,15px);color:#aeb4ba;margin-top:10px}
+.delta.faster{border-color:rgba(0,230,118,.8);box-shadow:0 0 30px rgba(0,230,118,.12),inset 0 0 35px rgba(0,230,118,.05)}
+.delta.faster .value,.delta.faster .state{color:var(--green)}
+.delta.slower{border-color:rgba(255,77,77,.85);box-shadow:0 0 30px rgba(255,77,77,.12),inset 0 0 35px rgba(255,77,77,.05)}
+.delta.slower .value,.delta.slower .state{color:var(--red)}
+.delta.equal{border-color:#8f969d}
+.delta.equal .value,.delta.equal .state{color:#f0f2f4}
+.subtle{color:var(--muted)}
+.rpmline{display:flex;justify-content:space-between;align-items:end;margin-top:8px}
+.rpmnum{font-size:clamp(28px,3.3vw,52px);font-weight:900}
+.footer{color:#69717a;text-align:center;font-size:10px;padding:12px 0 2px}
+@media(max-width:900px){
+  .speed{grid-column:span 6}.gear{grid-column:span 3}.rpm{grid-column:span 3}
+  .small{grid-column:span 6}.fuel{grid-column:span 6}.position{grid-column:span 6}
+  .delta{grid-column:span 8}.current{grid-column:span 4}
+  .lap,.best,.last,.mode{grid-column:span 6}
+}
+@media(max-width:600px){
+  body{padding:7px}
+  :root{--gap:8px;--radius:13px}
+  .header{padding-bottom:9px;margin-bottom:8px}
+  .brand{font-size:22px}.subtitle{font-size:8px;letter-spacing:.11em}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .speed{grid-column:span 1}.gear{grid-column:span 1}.rpm{grid-column:span 2}
+  .small{grid-column:span 1}.fuel{grid-column:span 1}.position{grid-column:span 2}
+  .delta{grid-column:span 2;min-height:150px}.current{grid-column:span 2}
+  .lap,.best,.last,.mode{grid-column:span 1}
+  .card{padding:11px}
+  .value{font-size:clamp(28px,9vw,44px)}
+  .delta .value{font-size:clamp(44px,14vw,68px)}
+  .delta .state{font-size:12px}
+  .bar{height:9px;margin-top:8px}
+  .unit{font-size:9px}
+  .label{font-size:10px}
+  .footer{display:none}
+}
+@media(max-width:370px){
+  .brand{font-size:19px}.subtitle{display:none}
+  .value{font-size:27px}.delta .value{font-size:40px}
+  .card{padding:9px}
 }
 </style>
 </head>
 <body>
-<main>
-<header class="top">
-  <div>
-    <div class="brand">SPEED DYNAMICS</div>
-    <div class="sub">GT7 RACE ENGINEER</div>
-  </div>
-  <div id="status" class="status">OFFLINE</div>
-</header>
+<div class="app">
+  <header class="header">
+    <div>
+      <div class="brand">SPEED DYNAMICS</div>
+      <div class="subtitle">GT7 RACE ENGINEER · LIVE TELEMETRY</div>
+    </div>
+    <div id="live" class="live off"><span class="dot"></span><span id="liveText">OFFLINE</span></div>
+  </header>
 
-<section class="grid">
-  <div class="card span4"><div class="label">SPEED</div><div id="speed" class="value">0.0</div><div class="unit">km/h</div></div>
-  <div class="card span4"><div class="label">GEAR</div><div id="gear" class="value">0</div></div>
-  <div class="card span4"><div class="label">RPM</div><div id="rpm" class="value">0</div></div>
+  <main class="grid">
+    <section class="card speed">
+      <div class="label">SPEED</div><div id="speed" class="value">0.0</div><div class="unit">km/h</div>
+    </section>
+    <section class="card gear">
+      <div class="label">GEAR</div><div id="gear" class="value">N</div>
+    </section>
+    <section class="card rpm">
+      <div class="label">RPM</div>
+      <div class="rpmline"><div id="rpm" class="rpmnum">0</div></div>
+      <div class="bar rpmbar"><div id="rpmFill" class="fill"></div></div>
+    </section>
 
-  <div class="card span4"><div class="label">THROTTLE</div><div id="throttle" class="value">0%</div><div class="bar"><div id="throttleFill" class="fill"></div></div></div>
-  <div class="card span4"><div class="label">BRAKE</div><div id="brake" class="value">0%</div><div class="bar"><div id="brakeFill" class="fill"></div></div></div>
-  <div class="card span4"><div class="label">FUEL</div><div id="fuel" class="value">0.0</div><div class="unit">Liter</div></div>
+    <section class="card small throttle">
+      <div class="label">THROTTLE</div><div id="throttle" class="value">0%</div>
+      <div class="bar"><div id="throttleFill" class="fill"></div></div>
+    </section>
+    <section class="card small brake">
+      <div class="label">BRAKE</div><div id="brake" class="value">0%</div>
+      <div class="bar"><div id="brakeFill" class="fill"></div></div>
+    </section>
+    <section class="card fuel">
+      <div class="label">FUEL</div><div id="fuel" class="value">0.0</div><div class="unit">Liter</div></section>
+    <section class="card position">
+      <div class="label">POSITION</div><div id="position" class="value">-/–</div></section>
 
-  <div class="card span4"><div class="label">POSITION</div><div id="position" class="value">-/ -</div></div>
-  <div class="card span4"><div class="label">LAP</div><div id="lap" class="value">0/?</div></div>
-  <div class="card span4"><div class="label">AKTUELLE RUNDE</div><div id="current" class="value">0:00.000</div></div>
+    <section id="deltaCard" class="card delta equal">
+      <div class="label">RUNDEN-DELTA</div>
+      <div id="delta" class="value">0.000 s</div>
+      <div id="deltaState" class="state">KEINE REFERENZ</div>
+      <div class="ref">Referenz: <span id="reference">--:--.---</span></div>
+    </section>
+    <section class="card current">
+      <div class="label">AKTUELLE RUNDE</div><div id="currentLap" class="value">0:00.000</div></section>
 
-  <div class="card span8 delta-card">
-    <div class="label">RUNDEN-DELTA</div>
-    <div id="delta" class="delta wait">REFERENZ WIRD AUFGEZEICHNET</div>
-    <div id="ref" class="ref">Erste vollständige Referenzrunde fahren.</div>
-    <div id="hint" class="hint"></div>
-  </div>
-  <div class="card span4"><div class="label">BEST LAP</div><div id="best" class="value">-:--.---</div></div>
-
-  <div class="card span4"><div class="label">LAST LAP</div><div id="last" class="value">-:--.---</div></div>
-  <div class="card span4"><div class="label">UDP-MODUS</div><div id="mode" class="value">-</div></div>
-  <div class="card span4"><div class="label">REFERENZ</div><div id="refSamples" class="value">0</div><div class="unit">Trackpunkte</div></div>
-</section>
-</main>
+    <section class="card lap">
+      <div class="label">RUNDE</div><div id="lap" class="value">0/–</div></section>
+    <section class="card best">
+      <div class="label">BEST LAP</div><div id="bestLap" class="value">--:--.---</div></section>
+    <section class="card last">
+      <div class="label">LAST LAP</div><div id="lastLap" class="value">--:--.---</div></section>
+    <section class="card mode">
+      <div class="label">UDP-MODUS</div><div id="mode" class="value">–</div></section>
+  </main>
+  <div class="footer">Speed Dynamics GT7 · responsive dashboard</div>
+</div>
 
 <script>
-const $=id=>document.getElementById(id);
+const $ = id => document.getElementById(id);
+const fmtTime = ms => {
+  if(ms == null || ms < 0) return "--:--.---";
+  const m = Math.floor(ms/60000);
+  const s = Math.floor((ms%60000)/1000);
+  const x = ms%1000;
+  return `${m}:${String(s).padStart(2,"0")}.${String(x).padStart(3,"0")}`;
+};
+const fmtDelta = ms => {
+  if(ms == null) return "0.000 s";
+  const sign = ms > 0 ? "+" : ms < 0 ? "−" : "";
+  return `${sign}${Math.abs(ms/1000).toFixed(3)} s`;
+};
+function set(id,v){$(id).textContent=v}
+function update(d){
+  set("speed", Number(d.speed||0).toFixed(1));
+  set("gear", (d.gear||0)===0 ? "N" : d.gear);
+  set("rpm", Math.round(d.rpm||0));
+  set("throttle", `${Math.round(d.throttle||0)}%`);
+  set("brake", `${Math.round(d.brake||0)}%`);
+  set("fuel", Number(d.fuel||0).toFixed(1));
+  set("position", `${d.position||0}/${d.cars||0}`);
+  set("lap", `${d.lap||0}/${d.total_laps>0?d.total_laps:"?"}`);
+  set("bestLap", fmtTime(d.best_lap_ms));
+  set("lastLap", fmtTime(d.last_lap_ms));
+  set("currentLap", fmtTime(d.current_lap_ms));
+  set("mode", d.mode || "–");
+  set("reference", fmtTime(d.reference_ms));
+  set("delta", fmtDelta(d.delta_ms));
 
-function timeText(ms){
-  if(ms===null||ms===undefined||ms<0)return "-:--.---";
-  const total=Math.floor(ms);
-  const min=Math.floor(total/60000);
-  const sec=Math.floor((total%60000)/1000);
-  const milli=total%1000;
-  return `${min}:${String(sec).padStart(2,"0")}.${String(milli).padStart(3,"0")}`;
+  $("throttleFill").style.width = `${Math.max(0,Math.min(100,d.throttle||0))}%`;
+  $("brakeFill").style.width = `${Math.max(0,Math.min(100,d.brake||0))}%`;
+
+  // GT7 does not expose the exact redline in the current state object.
+  // Use a display scale so the RPM bar remains useful without changing telemetry.
+  const rpmPct = Math.max(0,Math.min(100,(Number(d.rpm||0)/9000)*100));
+  $("rpmFill").style.width = `${rpmPct}%`;
+
+  const live = $("live"), liveText=$("liveText");
+  live.className = "live " + (d.connected ? "on" : "off");
+  liveText.textContent = d.connected ? "LIVE" : "OFFLINE";
+
+  const card=$("deltaCard");
+  card.classList.remove("faster","slower","equal");
+  const delta=d.delta_ms;
+  if(delta == null){card.classList.add("equal");set("deltaState","KEINE REFERENZ");}
+  else if(delta < -50){card.classList.add("faster");set("deltaState","SCHNELLER");}
+  else if(delta > 50){card.classList.add("slower");set("deltaState","LANGSAMER");}
+  else {card.classList.add("equal");set("deltaState","GLEICH");}
 }
-
-function deltaText(ms){
-  if(ms===null||ms===undefined)return null;
-  const sign=ms>0?"+":"";
-  return `${sign}${(ms/1000).toFixed(3)} s`;
-}
-
-function render(d){
-  $("status").textContent=d.connected?"LIVE":"OFFLINE";
-  $("status").style.color=d.connected?"#53d26f":"#ff5c5c";
-
-  $("speed").textContent=Number(d.speed||0).toFixed(1);
-  $("gear").textContent=d.gear??0;
-  $("rpm").textContent=Math.round(d.rpm||0);
-  $("throttle").textContent=`${d.throttle||0}%`;
-  $("brake").textContent=`${d.brake||0}%`;
-  $("throttleFill").style.width=`${Math.max(0,Math.min(100,d.throttle||0))}%`;
-  $("brakeFill").style.width=`${Math.max(0,Math.min(100,d.brake||0))}%`;
-  $("fuel").textContent=Number(d.fuel||0).toFixed(1);
-  $("position").textContent=`${d.position||0}/${d.cars||0}`;
-  $("lap").textContent=`${d.lap||0}/${d.total_laps||"?"}`;
-  $("current").textContent=timeText(d.current_lap_ms);
-  $("best").textContent=timeText(d.best_lap_ms);
-  $("last").textContent=timeText(d.last_lap_ms);
-  $("mode").textContent=d.mode||"-";
-  $("refSamples").textContent=d.reference_samples||0;
-
-  const delta=$("delta");
-  const dt=deltaText(d.delta_ms);
-
-  if(!d.reference_ready){
-    delta.textContent="REFERENZ WIRD AUFGEZEICHNET";
-    delta.className="delta wait";
-    $("ref").textContent="Erste vollständige Referenzrunde fahren.";
-    $("hint").textContent="Danach wird das Delta während der Fahrt laufend aktualisiert.";
-  }else{
-    delta.textContent=dt??"0.000 s";
-    delta.className="delta "+((d.delta_ms||0)<-5?"negative":((d.delta_ms||0)>5?"positive":"zero"));
-    $("ref").textContent=`Referenz: ${timeText(d.reference_ms)}`;
-    $("hint").textContent="Negativ = schneller · Positiv = langsamer";
-  }
-}
-
 async function poll(){
   try{
-    const r=await fetch(`/api?_=${Date.now()}`,{cache:"no-store"});
-    if(r.ok)render(await r.json());
+    const r=await fetch("/api?ts="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw new Error();
+    update(await r.json());
   }catch(e){
-    $("status").textContent="OFFLINE";
-    $("status").style.color="#ff5c5c";
+    $("live").className="live off";
+    $("liveText").textContent="OFFLINE";
   }
+  setTimeout(poll,120);
 }
-
-setInterval(poll,250);
 poll();
 </script>
 </body>
